@@ -7,7 +7,7 @@ function initials(name) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export default function SearchPage() {
+export default function SearchPage({ onViewProfile }) {
   const showToast = useToast();
   const [specialisms, setSpecialisms] = useState([]);
   const [selectedGoals, setSelectedGoals] = useState(new Set());
@@ -131,7 +131,13 @@ export default function SearchPage() {
               ) : (
                 <div className="card-grid">
                   {results.map((pt) => (
-                    <PtCard key={pt.id} pt={pt} selectedGoals={selectedGoals} onEnquire={() => setEnquiryTarget(pt)} />
+                    <PtCard
+                      key={pt.id}
+                      pt={pt}
+                      selectedGoals={selectedGoals}
+                      onEnquire={() => setEnquiryTarget(pt)}
+                      onViewProfile={() => onViewProfile(pt.id)}
+                    />
                   ))}
                 </div>
               )}
@@ -154,7 +160,7 @@ export default function SearchPage() {
   );
 }
 
-function PtCard({ pt, selectedGoals, onEnquire }) {
+function PtCard({ pt, selectedGoals, onEnquire, onViewProfile }) {
   const locationLine = pt.match_via === 'gym' && pt.gym_name
     ? `Trains at ${pt.gym_name} (${pt.gym_postcode})`
     : `${pt.postcode} · covers ${pt.radius_miles} mi`;
@@ -166,8 +172,21 @@ function PtCard({ pt, selectedGoals, onEnquire }) {
   ].filter(Boolean);
 
   return (
-    <div className="pt-card">
-      <div className="avatar">{initials(pt.display_name)}</div>
+    <div
+      className="pt-card"
+      onClick={onViewProfile}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') onViewProfile(); }}
+      style={{ cursor: 'pointer' }}
+    >
+      <div className="avatar" style={{ overflow: 'hidden' }}>
+        {pt.profile_photo_url ? (
+          <img src={pt.profile_photo_url} alt={pt.display_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          initials(pt.display_name)
+        )}
+      </div>
       <div className="pt-info">
         <h3>{pt.display_name}{pt.listing_tier === 'featured' ? ' ★' : ''}</h3>
         <div className="area-line">
@@ -189,6 +208,7 @@ function PtCard({ pt, selectedGoals, onEnquire }) {
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent-dim)' }}
               >
                 {link.label}
@@ -200,7 +220,12 @@ function PtCard({ pt, selectedGoals, onEnquire }) {
       <div className="stat-col">
         <div className="distance">{pt.distance_miles.toFixed(1)}<small> mi</small></div>
         {pt.rate_gbp ? <div className="rate">£{pt.rate_gbp}/session</div> : null}
-        <button className="enquire-btn" onClick={onEnquire}>Enquire</button>
+        <button
+          className="enquire-btn"
+          onClick={(e) => { e.stopPropagation(); onEnquire(); }}
+        >
+          Enquire
+        </button>
       </div>
     </div>
   );

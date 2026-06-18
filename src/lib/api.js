@@ -86,6 +86,21 @@ export async function fetchOwnPtProfile(userId) {
   return data;
 }
 
+// ---------------------------------------------------------------
+// Public PT profile (for the dedicated profile page, reached by
+// clicking a search result card)
+// ---------------------------------------------------------------
+export async function fetchPublicPtProfile(ptId) {
+  const { data, error } = await supabase
+    .from('pts')
+    .select('*, pt_specialisms(specialisms(id, slug, label)), gyms(id, name, postcode)')
+    .eq('id', ptId)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function upsertPtProfile({
   userId,
   displayName,
@@ -140,6 +155,27 @@ export async function setListingActive(userId, isActive) {
   const { error } = await supabase
     .from('pts')
     .update({ is_active: isActive })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
+export async function updateProfilePhotoUrl(userId, url) {
+  const { error } = await supabase.from('pts').update({ profile_photo_url: url }).eq('id', userId);
+  if (error) throw error;
+}
+
+export async function addGalleryImageUrl(userId, url, currentUrls) {
+  const { error } = await supabase
+    .from('pts')
+    .update({ gallery_urls: [...currentUrls, url] })
+    .eq('id', userId);
+  if (error) throw error;
+}
+
+export async function removeGalleryImageUrl(userId, url, currentUrls) {
+  const { error } = await supabase
+    .from('pts')
+    .update({ gallery_urls: currentUrls.filter((u) => u !== url) })
     .eq('id', userId);
   if (error) throw error;
 }

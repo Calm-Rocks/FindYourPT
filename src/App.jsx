@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { ToastProvider } from './lib/ToastContext';
 import SearchPage from './pages/SearchPage';
+import PtProfilePage from './pages/PtProfilePage';
 import AuthPage from './pages/AuthPage';
 import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import ManageListingPage from './pages/ManageListingPage';
@@ -10,10 +11,12 @@ import EnquiriesPage from './pages/EnquiriesPage';
 function AppShell() {
   const { user, loading } = useAuth();
   const [view, setView] = useState('client'); // 'client' | 'pt'
+  const [clientSubview, setClientSubview] = useState({ name: 'search' }); // { name: 'search' } | { name: 'profile', ptId }
   const [ptSubview, setPtSubview] = useState('dashboard'); // 'dashboard' | 'manage-listing' | 'enquiries'
 
   function goToClientView() {
     setView('client');
+    setClientSubview({ name: 'search' });
   }
 
   function goToPtView() {
@@ -40,7 +43,16 @@ function AppShell() {
       </div>
 
       <main>
-        {view === 'client' && <SearchPage />}
+        {view === 'client' && (
+          clientSubview.name === 'profile' ? (
+            <PtProfilePage
+              ptId={clientSubview.ptId}
+              onBack={() => setClientSubview({ name: 'search' })}
+            />
+          ) : (
+            <SearchPage onViewProfile={(ptId) => setClientSubview({ name: 'profile', ptId })} />
+          )
+        )}
         {view === 'pt' && (loading ? (
           <div className="wrap"><p className="loading-text">Loading…</p></div>
         ) : !user ? (

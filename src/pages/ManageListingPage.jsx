@@ -7,8 +7,12 @@ import {
   upsertPtProfile,
   fetchCuratedGyms,
   createCustomGym,
+  updateProfilePhotoUrl,
+  addGalleryImageUrl,
+  removeGalleryImageUrl,
 } from '../lib/api';
 import { resolvePostcode } from '../lib/postcode';
+import { uploadProfilePhoto, uploadGalleryImage, deleteGalleryImage, MAX_GALLERY_IMAGES } from '../lib/imageUpload';
 
 const CUSTOM_GYM_VALUE = '__custom__';
 const NO_GYM_VALUE = '';
@@ -21,6 +25,11 @@ export default function ManageListingPage({ onNavigate }) {
   const [gyms, setGyms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hadExistingProfile, setHadExistingProfile] = useState(false);
+
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState(null);
+  const [galleryUrls, setGalleryUrls] = useState([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
 
   const [displayName, setDisplayName] = useState('');
   const [postcode, setPostcode] = useState('');
@@ -64,6 +73,8 @@ export default function ManageListingPage({ onNavigate }) {
           setWebsiteUrl(ownProfile.website_url ?? '');
           setInstagramUrl(ownProfile.instagram_url ?? '');
           setFacebookUrl(ownProfile.facebook_url ?? '');
+          setProfilePhotoUrl(ownProfile.profile_photo_url ?? null);
+          setGalleryUrls(ownProfile.gallery_urls ?? []);
         }
       } catch (err) {
         showToast('Could not load your listing — try refreshing.', { error: true });
@@ -81,6 +92,53 @@ export default function ManageListingPage({ onNavigate }) {
       else next.add(id);
       return next;
     });
+  }
+
+  async function handleProfilePhotoChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    try {
+      const url = await uploadProfilePhoto(user.id, file);
+      await updateProfilePhotoUrl(user.id, url);
+      setProfilePhotoUrl(url);
+      showToast('Profile photo updated.');
+    } catch (err) {
+      showToast(err.message || 'Could not upload that image.', { error: true });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
+  async function handleGalleryFileChange(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setUploadingGallery(true);
+    try {
+      const url = await uploadGalleryImage(user.id, file, galleryUrls.length);
+      await addGalleryImageUrl(user.id, url, galleryUrls);
+      setGalleryUrls((prev) => [...prev, url]);
+      showToast('Image added to your gallery.');
+    } catch (err) {
+      showToast(err.message || 'Could not upload that image.', { error: true });
+    } finally {
+      setUploadingGallery(false);
+    }
+  }
+
+  async function handleRemoveGalleryImage(url) {
+    try {
+      await deleteGalleryImage(url);
+      await removeGalleryImageUrl(user.id, url, galleryUrls);
+      setGalleryUrls((prev) => prev.filter((u) => u !== url));
+      showToast('Image removed.');
+    } catch (err) {
+      showToast('Could not remove that image.', { error: true });
+    }
   }
 
   async function handleSave(e) {
@@ -170,6 +228,36 @@ export default function ManageListingPage({ onNavigate }) {
       <div className="form-card">
         <h2>{hadExistingProfile ? 'Edit your listing' : 'Create your listing'}</h2>
         <p className="form-sub">This is what clients see when they search.</p>
+
+        <div className="form-row" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <div
+            style={{
+              width: 84, height: 84, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+              background: 'var(--olive)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 28, color: '#fff',
+            }}
+          >
+            {profilePhotoUrl ? (
+              <img src={profilePhotoUrl} alt="Your profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              (displayName || '?').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+            )}
+          </div>
+          <div>
+            <label className="field-label" htmlFor="profile-photo-input" style={{ display: 'block', marginBottom: 8 }}>
+              Profile photo
+            </label>
+            <input
+              type="file"
+              id="profile-photo-input"
+              accept="image/jpeg,image/png"
+              onChange={handleProfilePhotoChange}
+              disabled={uploadingPhoto}
+              style={{ fontSize: 13 }}
+            />
+            <p className="hint">JPEG or PNG, up to 5MB. {uploadingPhoto && 'Uploading…'}</p>
+          </div>
+        </div>
 
         <form onSubmit={handleSave}>
           <div className="form-row form-row-split">
@@ -277,6 +365,48 @@ export default function ManageListingPage({ onNavigate }) {
           <div className="form-row">
             <label className="field-label" htmlFor="pt-facebook">Facebook (optional)</label>
             <input type="text" id="pt-facebook" value={facebookUrl} onChange={(e) => setFacebookUrl(e.target.value)} placeholder="https://facebook.com/..." />
+          </div>
+
+          <div className="form-row">
+            <span className="field-label">Gallery photos ({galleryUrls.length}/{MAX_GALLERY_IMAGES})</span>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+              {galleryUrls.map((url) => (
+                <div key={url} style={{ position: 'relative', width: 84, height: 84 }}>
+                  <img
+                    src={url}
+                    alt="Gallery"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveGalleryImage(url)}
+                    aria-label="Remove image"
+                    style={{
+                      position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: '50%',
+                      background: 'var(--ink)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 13,
+                      lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            {galleryUrls.length < MAX_GALLERY_IMAGES ? (
+              <>
+                <input
+                  type="file"
+                  id="gallery-photo-input"
+                  accept="image/jpeg,image/png"
+                  onChange={handleGalleryFileChange}
+                  disabled={uploadingGallery}
+                  style={{ fontSize: 13 }}
+                />
+                <p className="hint">JPEG or PNG, up to 5MB each, up to {MAX_GALLERY_IMAGES} photos. {uploadingGallery && 'Uploading…'}</p>
+              </>
+            ) : (
+              <p className="hint">Gallery is full — remove a photo to add a new one.</p>
+            )}
           </div>
 
           {error && <p className="error-text">{error}</p>}

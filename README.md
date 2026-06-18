@@ -41,10 +41,21 @@ In your Supabase project dashboard, open **SQL Editor**, and run these files **i
 1. `supabase/migrations/0001_init.sql` — core tables, search function, security policies.
 2. `supabase/migrations/0002_gyms_and_socials.sql` — adds gyms, gym linkage on trainer listings, and website/Instagram/Facebook fields. Seeds ~18 real UK gym branches as curated options.
 3. `supabase/migrations/0003_gym_aware_search.sql` — replaces the search function so it also matches trainers via their linked gym's location, not just their own postcode/radius.
+4. `supabase/migrations/0004_trainer_images.sql` — creates the `trainer-images` storage bucket plus security policies, and adds profile photo / gallery columns to `pts`. **If the bucket-creation statement at the top errors in your SQL editor** (some Supabase projects restrict creating buckets via raw SQL), create it manually instead: Storage → New bucket → name `trainer-images` → Public bucket: ON → File size limit: 5MB → Allowed MIME types: `image/jpeg, image/png` — then run just the policy and `alter table` statements from the file.
 
-If you already ran `0001_init.sql` on a live project before these gym features existed, just run `0002` and `0003` on top of it — they're additive and won't touch your existing trainer or enquiry data.
+If you already ran earlier migrations on a live project, just run whichever ones you're missing — they're all additive and won't touch existing trainer or enquiry data.
 
-(`supabase/test_auth_stub.sql` is **not** part of your real project — it's a stand-in used only to test migrations locally before deployment.)
+(`supabase/test_auth_stub.sql` and `supabase/test_storage_stub.sql` are **not** part of your real project — stand-ins used only to test migrations locally before deployment.)
+
+## Image upload security
+
+Profile photos and gallery images go through three independent checks, deliberately not trusting each other:
+
+1. **Client-side validation** (`src/lib/imageUpload.js`) checks file size and reads the file's actual byte signature (not just its filename or browser-reported type) to confirm it's a genuine JPEG or PNG — a file renamed to `photo.jpg` that's actually something else gets rejected here. This layer exists purely for fast feedback; anyone can bypass it by calling the API directly, so it's not the real security boundary.
+2. **The storage bucket config** (set in migration 0004) enforces a 5MB size limit and an allowed-MIME-type list server-side, regardless of what a tampered client claims.
+3. **Row Level Security policies on Supabase Storage** restrict each trainer to writing only inside a folder matching their own user id (`{user_id}/profile.jpg`, `{user_id}/gallery/{id}.jpg`) — verified by directly testing that one trainer's account cannot write into or delete another trainer's folder, even when explicitly attempting to.
+
+Uploaded files are never executed as code by Supabase Storage — they're served as static downloads only — which rules out the most dangerous class of file-upload exploit by design, separate from the validation layers above.
 
 ### 3. Get your API credentials
 
@@ -105,14 +116,16 @@ src/
   lib/
     supabaseClient.js   — Supabase connection
     postcode.js         — postcodes.io integration
+    imageUpload.js      — profile photo / gallery upload, with real file-type validation
     api.js              — all database reads/writes, in one place
     AuthContext.jsx      — login state, available app-wide
     ToastContext.jsx     — small notification popups
   pages/
     SearchPage.jsx           — client-facing search + enquiry flow
+    PtProfilePage.jsx        — public trainer profile (bio, gallery, socials), reached by clicking a card
     AuthPage.jsx              — trainer sign up / log in
     DashboardOverviewPage.jsx — trainer's dashboard home: stats + navigation
-    ManageListingPage.jsx     — trainer's listing editor (bio, gym, specialisms, socials)
+    ManageListingPage.jsx     — trainer's listing editor (bio, gym, specialisms, socials, images)
     EnquiriesPage.jsx         — trainer's enquiries inbox
   App.jsx                — top-level layout and view switching
 supabase/
@@ -120,4 +133,5 @@ supabase/
     0001_init.sql               — core schema, run once
     0002_gyms_and_socials.sql   — gyms table + social/website fields, run after 0001
     0003_gym_aware_search.sql   — gym-aware search function, run after 0002
+    0004_trainer_images.sql     — image storage bucket + security policies, run after 0003
 ```
