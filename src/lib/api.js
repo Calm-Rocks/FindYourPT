@@ -49,12 +49,37 @@ export async function searchPts({ lat, lon, specialismIds }) {
 }
 
 // ---------------------------------------------------------------
+// Gyms
+// ---------------------------------------------------------------
+export async function fetchCuratedGyms() {
+  const { data, error } = await supabase
+    .from('gyms')
+    .select('id, name, postcode')
+    .eq('is_curated', true)
+    .order('name');
+  if (error) throw error;
+  return data;
+}
+
+// Adds a one-off gym a PT typed in themselves (not in the curated list).
+// Returns the new gym's id so the caller can link the PT to it immediately.
+export async function createCustomGym({ name, postcode, lat, lon, userId }) {
+  const { data, error } = await supabase
+    .from('gyms')
+    .insert({ name, postcode, lat, lon, is_curated: false, created_by: userId })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+// ---------------------------------------------------------------
 // PT profile (the logged-in trainer's own listing)
 // ---------------------------------------------------------------
 export async function fetchOwnPtProfile(userId) {
   const { data, error } = await supabase
     .from('pts')
-    .select('*, pt_specialisms(specialism_id)')
+    .select('*, pt_specialisms(specialism_id), gyms(id, name, postcode)')
     .eq('id', userId)
     .maybeSingle();
   if (error) throw error;
@@ -72,6 +97,10 @@ export async function upsertPtProfile({
   rateGbp,
   listingTier,
   specialismIds,
+  gymId,
+  websiteUrl,
+  instagramUrl,
+  facebookUrl,
 }) {
   const { error: upsertError } = await supabase.from('pts').upsert({
     id: userId,
@@ -84,6 +113,10 @@ export async function upsertPtProfile({
     rate_gbp: rateGbp,
     listing_tier: listingTier,
     is_active: true,
+    gym_id: gymId || null,
+    website_url: websiteUrl || null,
+    instagram_url: instagramUrl || null,
+    facebook_url: facebookUrl || null,
   });
   if (upsertError) throw upsertError;
 

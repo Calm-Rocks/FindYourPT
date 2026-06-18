@@ -15,13 +15,17 @@ No payment processing — this is an intro service, not a booking platform.
 ## How the matching actually works
 
 Every trainer's base postcode is resolved to a lat/lon once (at signup, or whenever
-they edit their listing) and stored on their row. When a client searches, their
+they edit their listing) and stored on their row. A trainer can also optionally link
+their listing to a gym — either picking one of the curated UK gym branches seeded by
+migration 0002, or adding their own if it's not listed. When a client searches, their
 postcode is resolved the same way, and a Postgres function (`search_pts`, defined in
-the migration) calculates the straight-line distance from the client to every active
-trainer and returns the ones whose **stated coverage radius** reaches that point —
-not the client's radius, the trainer's. Results are sorted featured-tier-first, then
-nearest. This calculation happens in the database, not in the browser, so it scales
-to a large number of trainers without sending all of them to every client.
+the migrations) checks **two** possible ways a trainer can match: their own stated
+postcode and travel radius (for mobile/outcall trainers), or their linked gym's fixed
+location (since the client is the one travelling to a gym, this check doesn't use the
+trainer's travel radius at all — a trainer can show up via their gym even if a client
+is well outside their personal radius). Results are sorted featured-tier-first, then
+nearest. This calculation happens in the database, not in the browser, so it scales to
+a large number of trainers without sending all of them to every client.
 
 ## One-time setup
 
@@ -30,15 +34,17 @@ to a large number of trainers without sending all of them to every client.
 Go to [supabase.com](https://supabase.com), create a free project, and wait ~2
 minutes for it to provision.
 
-### 2. Run the database migration
+### 2. Run the database migrations
 
-In your Supabase project dashboard, open **SQL Editor**, paste the entire contents
-of `supabase/migrations/0001_init.sql`, and run it. This creates all tables, the
-search function, and the security policies that control who can read/write what.
+In your Supabase project dashboard, open **SQL Editor**, and run these files **in order** — paste the entire contents of each, run it, then move to the next:
 
-(`supabase/test_auth_stub.sql` is **not** part of your real project — it's a stand-in
-used only to test the migration locally before deployment, and Supabase already
-provides the real version of what it fakes.)
+1. `supabase/migrations/0001_init.sql` — core tables, search function, security policies.
+2. `supabase/migrations/0002_gyms_and_socials.sql` — adds gyms, gym linkage on trainer listings, and website/Instagram/Facebook fields. Seeds ~18 real UK gym branches as curated options.
+3. `supabase/migrations/0003_gym_aware_search.sql` — replaces the search function so it also matches trainers via their linked gym's location, not just their own postcode/radius.
+
+If you already ran `0001_init.sql` on a live project before these gym features existed, just run `0002` and `0003` on top of it — they're additive and won't touch your existing trainer or enquiry data.
+
+(`supabase/test_auth_stub.sql` is **not** part of your real project — it's a stand-in used only to test migrations locally before deployment.)
 
 ### 3. Get your API credentials
 
@@ -103,10 +109,15 @@ src/
     AuthContext.jsx      — login state, available app-wide
     ToastContext.jsx     — small notification popups
   pages/
-    SearchPage.jsx       — client-facing search + enquiry flow
-    AuthPage.jsx         — trainer sign up / log in
-    DashboardPage.jsx    — trainer's own listing editor + enquiries inbox
+    SearchPage.jsx           — client-facing search + enquiry flow
+    AuthPage.jsx              — trainer sign up / log in
+    DashboardOverviewPage.jsx — trainer's dashboard home: stats + navigation
+    ManageListingPage.jsx     — trainer's listing editor (bio, gym, specialisms, socials)
+    EnquiriesPage.jsx         — trainer's enquiries inbox
   App.jsx                — top-level layout and view switching
 supabase/
-  migrations/0001_init.sql — the entire database schema, run once
+  migrations/
+    0001_init.sql               — core schema, run once
+    0002_gyms_and_socials.sql   — gyms table + social/website fields, run after 0001
+    0003_gym_aware_search.sql   — gym-aware search function, run after 0002
 ```

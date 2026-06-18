@@ -155,14 +155,25 @@ export default function SearchPage() {
 }
 
 function PtCard({ pt, selectedGoals, onEnquire }) {
+  const locationLine = pt.match_via === 'gym' && pt.gym_name
+    ? `Trains at ${pt.gym_name} (${pt.gym_postcode})`
+    : `${pt.postcode} · covers ${pt.radius_miles} mi`;
+
+  const socialLinks = [
+    pt.website_url ? { label: 'Website', href: pt.website_url } : null,
+    pt.instagram_url ? { label: 'Instagram', href: pt.instagram_url } : null,
+    pt.facebook_url ? { label: 'Facebook', href: pt.facebook_url } : null,
+  ].filter(Boolean);
+
   return (
     <div className="pt-card">
       <div className="avatar">{initials(pt.display_name)}</div>
       <div className="pt-info">
         <h3>{pt.display_name}{pt.listing_tier === 'featured' ? ' ★' : ''}</h3>
         <div className="area-line">
-          {pt.postcode} · covers {pt.radius_miles} mi{pt.rate_gbp ? ` · £${pt.rate_gbp}/session` : ''}
+          {locationLine}{pt.rate_gbp ? ` · £${pt.rate_gbp}/session` : ''}
         </div>
+        {pt.bio && <p style={{ fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 10px', lineHeight: 1.4 }}>{pt.bio}</p>}
         <div className="pt-tags">
           {pt.specialisms.map((s) => (
             <span key={s.id} className={`pt-tag${selectedGoals.has(s.slug) ? ' match' : ''}`}>
@@ -170,6 +181,21 @@ function PtCard({ pt, selectedGoals, onEnquire }) {
             </span>
           ))}
         </div>
+        {socialLinks.length > 0 && (
+          <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+            {socialLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent-dim)' }}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
       <div className="stat-col">
         <div className="distance">{pt.distance_miles.toFixed(1)}<small> mi</small></div>

@@ -3,24 +3,36 @@ import { AuthProvider, useAuth } from './lib/AuthContext';
 import { ToastProvider } from './lib/ToastContext';
 import SearchPage from './pages/SearchPage';
 import AuthPage from './pages/AuthPage';
-import DashboardPage from './pages/DashboardPage';
+import DashboardOverviewPage from './pages/DashboardOverviewPage';
+import ManageListingPage from './pages/ManageListingPage';
+import EnquiriesPage from './pages/EnquiriesPage';
 
 function AppShell() {
   const { user, loading } = useAuth();
   const [view, setView] = useState('client'); // 'client' | 'pt'
+  const [ptSubview, setPtSubview] = useState('dashboard'); // 'dashboard' | 'manage-listing' | 'enquiries'
+
+  function goToClientView() {
+    setView('client');
+  }
+
+  function goToPtView() {
+    setView('pt');
+    setPtSubview('dashboard');
+  }
 
   return (
     <>
       <div className="topbar">
         <div className="wrap">
-          <a href="#" className="logo" onClick={(e) => { e.preventDefault(); setView('client'); }}>
+          <a href="#" className="logo" onClick={(e) => { e.preventDefault(); goToClientView(); }}>
             FIND<span>YOUR</span>PT
           </a>
           <nav className="nav-tabs">
-            <button className={`nav-tab${view === 'client' ? ' active' : ''}`} onClick={() => setView('client')}>
+            <button className={`nav-tab${view === 'client' ? ' active' : ''}`} onClick={goToClientView}>
               Find a trainer
             </button>
-            <button className={`nav-tab${view === 'pt' ? ' active' : ''}`} onClick={() => setView('pt')}>
+            <button className={`nav-tab${view === 'pt' ? ' active' : ''}`} onClick={goToPtView}>
               {user ? 'Your dashboard' : 'List your services'}
             </button>
           </nav>
@@ -31,10 +43,14 @@ function AppShell() {
         {view === 'client' && <SearchPage />}
         {view === 'pt' && (loading ? (
           <div className="wrap"><p className="loading-text">Loading…</p></div>
-        ) : user ? (
-          <DashboardPage />
-        ) : (
+        ) : !user ? (
           <AuthPage />
+        ) : ptSubview === 'dashboard' ? (
+          <DashboardOverviewPage onNavigate={setPtSubview} />
+        ) : ptSubview === 'manage-listing' ? (
+          <ManageListingPage onNavigate={setPtSubview} />
+        ) : (
+          <EnquiriesPage onNavigate={setPtSubview} />
         ))}
       </main>
 
