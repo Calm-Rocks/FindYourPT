@@ -73,7 +73,13 @@ export async function uploadProfilePhoto(userId, file) {
   if (error) throw error;
 
   const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
-  return data.publicUrl;
+  // Cache-bust: the path (and therefore the base URL) is identical every
+  // time a trainer re-uploads their profile photo, since we always store
+  // it at the same fixed path. Without this, browsers and the CDN in
+  // front of Storage will keep serving the OLD cached image at that URL
+  // even though the file underneath has changed — appending a changing
+  // query param forces a fresh fetch without needing a new path.
+  return `${data.publicUrl}?v=${Date.now()}`;
 }
 
 export async function uploadGalleryImage(userId, file, existingCount) {
