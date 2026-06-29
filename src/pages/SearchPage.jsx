@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { fetchSpecialisms, searchPts, submitEnquiry } from '../lib/api';
+import { useState } from 'react';
+import { searchPts, submitEnquiry } from '../lib/api';
 import { resolvePostcode, PostcodeError } from '../lib/postcode';
 import { useToast } from '../lib/ToastContext';
 
@@ -7,21 +7,22 @@ function initials(name) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 }
 
-export default function SearchPage({ onViewProfile }) {
+export default function SearchPage({
+  specialisms,
+  postcodeInput,
+  setPostcodeInput,
+  selectedGoals,
+  setSelectedGoals,
+  results,
+  setResults,
+  heading,
+  setHeading,
+  searching,
+  setSearching,
+  onViewProfile,
+}) {
   const showToast = useToast();
-  const [specialisms, setSpecialisms] = useState([]);
-  const [selectedGoals, setSelectedGoals] = useState(new Set());
-  const [postcodeInput, setPostcodeInput] = useState('');
-  const [results, setResults] = useState(null); // null = no search yet
-  const [heading, setHeading] = useState('Search to find trainers near you');
-  const [searching, setSearching] = useState(false);
   const [enquiryTarget, setEnquiryTarget] = useState(null);
-
-  useEffect(() => {
-    fetchSpecialisms()
-      .then(setSpecialisms)
-      .catch(() => showToast('Could not load specialisms — check your connection.', { error: true }));
-  }, []);
 
   function toggleGoal(slug) {
     setSelectedGoals((prev) => {
@@ -59,7 +60,6 @@ export default function SearchPage({ onViewProfile }) {
       }
       setHeading(headingParts.join(' — '));
     } catch (err) {
-      // PostcodeError has a user-facing message we can show directly
       if (err instanceof PostcodeError) {
         showToast(err.message, { error: true });
       } else {
@@ -119,6 +119,10 @@ export default function SearchPage({ onViewProfile }) {
 
       <div className="results-section">
         <div className="wrap">
+          {searching && results === null && (
+            <p className="loading-text">Loading trainers…</p>
+          )}
+
           {results !== null && (
             <>
               <div className="results-meta">
@@ -141,7 +145,7 @@ export default function SearchPage({ onViewProfile }) {
                       pt={pt}
                       selectedGoals={selectedGoals}
                       onEnquire={() => setEnquiryTarget(pt)}
-                      onViewProfile={() => { window.scrollTo(0, 0); onViewProfile(pt.id); }}
+                      onViewProfile={() => { onViewProfile(pt.id); }}
                     />
                   ))}
                 </div>
@@ -176,11 +180,6 @@ function PtCard({ pt, selectedGoals, onEnquire, onViewProfile }) {
     pt.facebook_url ? { label: 'Facebook', href: pt.facebook_url } : null,
   ].filter(Boolean);
 
-  // Using a real <a> tag rather than a div-with-onClick so that click
-  // handling is unambiguous to every browser, extension, and assistive
-  // technology. href="#" with e.preventDefault() is intentional —
-  // we're a SPA without real URL routing per trainer, so there's no
-  // actual URL to link to yet, but the anchor semantics are what matter.
   return (
     <a
       className="pt-card"
