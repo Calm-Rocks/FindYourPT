@@ -10,6 +10,7 @@ export default function PtProfilePage({ ptId, onBack }) {
   const showToast = useToast();
   const [loading, setLoading] = useState(true);
   const [pt, setPt] = useState(null);
+  const [fetchError, setFetchError] = useState(false);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
 
   useEffect(() => {
@@ -19,7 +20,10 @@ export default function PtProfilePage({ ptId, onBack }) {
         const data = await fetchPublicPtProfile(ptId);
         if (!cancelled) setPt(data);
       } catch (err) {
-        if (!cancelled) showToast('Could not load this profile.', { error: true });
+        if (!cancelled) {
+          setFetchError(true);
+          showToast('Could not load this profile — check your connection and try again.', { error: true });
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -37,8 +41,8 @@ export default function PtProfilePage({ ptId, onBack }) {
       <div className="wrap" style={{ paddingTop: 40, paddingBottom: 80 }}>
         <button className="btn-ghost" onClick={onBack}>← Back to search</button>
         <div className="empty-state" style={{ marginTop: 24 }}>
-          <h3>Profile not found</h3>
-          <p>This trainer's listing may have been removed or paused.</p>
+          <h3>{fetchError ? 'Could not load this profile' : 'Profile not found'}</h3>
+          <p>{fetchError ? 'Something went wrong fetching this listing. Try going back and clicking again.' : "This trainer's listing may have been removed or paused."}</p>
         </div>
       </div>
     );

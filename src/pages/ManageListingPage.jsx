@@ -11,7 +11,7 @@ import {
   addGalleryImageUrl,
   removeGalleryImageUrl,
 } from '../lib/api';
-import { resolvePostcode } from '../lib/postcode';
+import { resolvePostcode, PostcodeError } from '../lib/postcode';
 import { uploadProfilePhoto, uploadGalleryImage, deleteGalleryImage, MAX_GALLERY_IMAGES } from '../lib/imageUpload';
 
 const CUSTOM_GYM_VALUE = '__custom__';
@@ -205,7 +205,11 @@ export default function ManageListingPage({ onNavigate }) {
       showToast('Listing saved — you are now visible to client searches in your area.');
       onNavigate('dashboard');
     } catch (err) {
-      setError('Could not save your listing — please try again.');
+      if (err instanceof PostcodeError) {
+        setError(err.message);
+      } else {
+        setError('Could not save your listing — please try again.');
+      }
     } finally {
       setSaving(false);
     }

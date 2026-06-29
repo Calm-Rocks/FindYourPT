@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchSpecialisms, searchPts, submitEnquiry } from '../lib/api';
-import { resolvePostcode } from '../lib/postcode';
+import { resolvePostcode, PostcodeError } from '../lib/postcode';
 import { useToast } from '../lib/ToastContext';
 
 function initials(name) {
@@ -41,7 +41,7 @@ export default function SearchPage({ onViewProfile }) {
     try {
       const resolved = await resolvePostcode(postcodeInput);
       if (!resolved) {
-        showToast("Couldn't find that postcode — double check it and try again.", { error: true });
+        showToast("Couldn't find that postcode — try entering a full postcode like LE14 3AB.", { error: true });
         setSearching(false);
         return;
       }
@@ -59,7 +59,12 @@ export default function SearchPage({ onViewProfile }) {
       }
       setHeading(headingParts.join(' — '));
     } catch (err) {
-      showToast('Search failed — please try again in a moment.', { error: true });
+      // PostcodeError has a user-facing message we can show directly
+      if (err instanceof PostcodeError) {
+        showToast(err.message, { error: true });
+      } else {
+        showToast('Search failed — please try again in a moment.', { error: true });
+      }
     } finally {
       setSearching(false);
     }
@@ -136,7 +141,7 @@ export default function SearchPage({ onViewProfile }) {
                       pt={pt}
                       selectedGoals={selectedGoals}
                       onEnquire={() => setEnquiryTarget(pt)}
-                      onViewProfile={() => onViewProfile(pt.id)}
+                      onViewProfile={() => { window.scrollTo(0, 0); onViewProfile(pt.id); }}
                     />
                   ))}
                 </div>
@@ -171,14 +176,17 @@ function PtCard({ pt, selectedGoals, onEnquire, onViewProfile }) {
     pt.facebook_url ? { label: 'Facebook', href: pt.facebook_url } : null,
   ].filter(Boolean);
 
+  // Using a real <a> tag rather than a div-with-onClick so that click
+  // handling is unambiguous to every browser, extension, and assistive
+  // technology. href="#" with e.preventDefault() is intentional —
+  // we're a SPA without real URL routing per trainer, so there's no
+  // actual URL to link to yet, but the anchor semantics are what matter.
   return (
-    <div
+    <a
       className="pt-card"
-      onClick={onViewProfile}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') onViewProfile(); }}
-      style={{ cursor: 'pointer' }}
+      href="#"
+      onClick={(e) => { e.preventDefault(); onViewProfile(); }}
+      style={{ cursor: 'pointer', textDecoration: 'none', display: 'grid' }}
     >
       <div className="avatar" style={{ overflow: 'hidden' }}>
         {pt.profile_photo_url ? (
@@ -222,12 +230,12 @@ function PtCard({ pt, selectedGoals, onEnquire, onViewProfile }) {
         {pt.rate_gbp ? <div className="rate">£{pt.rate_gbp}/session</div> : null}
         <button
           className="enquire-btn"
-          onClick={(e) => { e.stopPropagation(); onEnquire(); }}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onEnquire(); }}
         >
           Enquire
         </button>
       </div>
-    </div>
+    </a>
   );
 }
 

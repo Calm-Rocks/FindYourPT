@@ -143,6 +143,7 @@ input:focus, select:focus, textarea:focus{ border-color: var(--accent); }
   background: var(--paper); color: var(--ink); border-radius: var(--radius);
   padding: 22px 24px; display: grid; grid-template-columns: 88px 1fr 120px;
   gap: 22px; align-items: center; border: 1px solid transparent; transition: border-color .15s;
+  text-decoration: none;
 }
 .pt-card:hover{ border-color: var(--accent); }
 @media (max-width: 700px){
