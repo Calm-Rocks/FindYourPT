@@ -1,28 +1,18 @@
-// Real UK postcode geocoding via postcodes.io — free, no API key required.
-// Docs: https://postcodes.io/docs
+// UK geocoding via postcodes.io — free, no API key required.
+// Handles three input types:
+//   1. Full postcode   e.g. "LE1 2AB"  → /postcodes/{postcode}
+//   2. Outcode         e.g. "LE1"      → /outcodes/{outcode}
+//   3. Place name      e.g. "Leicester" → /places?q={name}
 //
-// resolvePostcode: takes a full or partial postcode, returns { lat, lon, postcode }
-// or null if it can't be resolved.
-//
-// Strategy:
-//   1. Try full postcode lookup (/postcodes/{postcode})
-//   2. If that 404s, try outcode lookup (/outcodes/{outcode})
-//   3. If both fail, return null with a clear error message so the UI
-//      can tell the user what went wrong rather than silently doing nothing.
-//
-// NOTE: "LE14" style inputs (two-digit district codes like LE14, DN10 etc.)
-// fail BOTH lookups because they're not valid standalone outcodes in Royal Mail
-// data — only the district letter+single-digit form (LE1, LE2, DN1) are valid
-// outcodes. Users need to enter a full postcode (e.g. "LE14 3AB") for these
-// to resolve. The function now returns a typed error so the UI can show a
-// helpful message rather than just "couldn't find that postcode."
+// Detection: if input matches a UK postcode/outcode pattern, try postcode
+// endpoints first. If neither postcode endpoint resolves it (including
+// two-digit district codes like LE14 which aren't valid standalone outcodes),
+// fall through to place name search. This means "LE14" will correctly fall
+// back to a Leicester area result rather than silently failing.
 
 const POSTCODES_IO_BASE = 'https://api.postcodes.io';
 
-// Return shape on success: { lat, lon, postcode }
-// Return shape on failure: null
-// Throws a PostcodeError with a user-facing .message on recognisable failures.
-
+// Typed error so callers can show the .message directly to users.
 export class PostcodeError extends Error {
   constructor(message) {
     super(message);
@@ -30,81 +20,66 @@ export class PostcodeError extends Error {
   }
 }
 
+// Pattern that matches UK postcodes and outcodes (but not plain town names).
+const UK_POSTCODE_PATTERN = /^[A-Z]{1,2}\d[A-Z\d]?(\s*\d[A-Z]{2})?$/i;
+
 export async function resolvePostcode(rawInput) {
   const cleaned = rawInput.trim();
   if (!cleaned) return null;
 
-  // Try full postcode lookup first.
-  try {
-    const res = await fetch(
-      `${POSTCODES_IO_BASE}/postcodes/${encodeURIComponent(cleaned)}`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.result) {
-        return {
-          lat: data.result.latitude,
-          lon: data.result.longitude,
-          postcode: data.result.postcode,
-        };
-      }
-    }
-  } catch (err) {
-    // Network failure — fall through to outcode attempt
-  }
+  const looksLikePostcode = UK_POSTCODE_PATTERN.test(cleaned.replace(/\s+/g, ''));
 
-  // Extract the outward code portion and try the outcode endpoint.
-  // Valid outcode format: 1-2 letters, 1-2 digits, optional trailing letter
-  // e.g. S1, LE1, LE2, DN1, SW1A — NOT LE14, DN10 (those need full postcodes)
-  const upper = cleaned.toUpperCase().replace(/\s+/g, '');
-  const outcodeMatch = upper.match(/^([A-Z]{1,2}\d{1,2}[A-Z]?)/);
-
-  if (outcodeMatch) {
-    const outcode = outcodeMatch[1];
+  if (looksLikePostcode) {
+    // 1. Try full postcode
     try {
-      const res = await fetch(
-        `${POSTCODES_IO_BASE}/outcodes/${encodeURIComponent(outcode)}`
-      );
+      const res = await fetch(`${POSTCODES_IO_BASE}/postcodes/${encodeURIComponent(cleaned)}`);
       if (res.ok) {
         const data = await res.json();
         if (data?.result) {
-          return {
-            lat: data.result.latitude,
-            lon: data.result.longitude,
-            postcode: outcode,
-          };
+          return { lat: data.result.latitude, lon: data.result.longitude, postcode: data.result.postcode };
         }
       }
+    } catch (_) {}
 
-      // Outcode also 404'd — give a specific, helpful error rather than
-      // a generic "couldn't find it". Two-digit district codes like LE14,
-      // DN10, etc. are the most common case here.
-      if (res.status === 404) {
-        // Check if this looks like a two-digit district (LE14, DN10 etc.)
-        const twoDigitDistrict = outcode.match(/^[A-Z]{1,2}\d{2}$/);
-        if (twoDigitDistrict) {
-          throw new PostcodeError(
-            `"${cleaned.toUpperCase()}" needs a full postcode to search — try something like "${outcode} 3AB". ` +
-            `Partial codes like "${outcode}" aren't precise enough to locate on a map.`
-          );
+    // 2. Try outcode (extract e.g. "LE1" from "LE14 3AB" or "LE1")
+    const outcode = cleaned.toUpperCase().replace(/\s+/g, '').match(/^[A-Z]{1,2}\d{1,2}[A-Z]?/)?.[0];
+    if (outcode) {
+      try {
+        const res = await fetch(`${POSTCODES_IO_BASE}/outcodes/${encodeURIComponent(outcode)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.result) {
+            return { lat: data.result.latitude, lon: data.result.longitude, postcode: outcode };
+          }
         }
-        throw new PostcodeError(
-          `Couldn't find "${cleaned.toUpperCase()}" — double-check it and try again, or enter a fuller postcode.`
-        );
-      }
-    } catch (err) {
-      if (err instanceof PostcodeError) throw err;
-      // Network failure on outcode lookup too — fall through to generic null
+      } catch (_) {}
     }
+    // Postcode-pattern input that didn't resolve — fall through to place search
+    // so something like "LE14" still gets a useful Leicester result.
   }
 
-  return null;
+  // 3. Place name search — works for towns, cities, postcodes.io /places?q=
+  try {
+    const res = await fetch(`${POSTCODES_IO_BASE}/places?q=${encodeURIComponent(cleaned)}&limit=1`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.result?.[0]) {
+        const place = data.result[0];
+        return {
+          lat: place.latitude,
+          lon: place.longitude,
+          postcode: place.name_1 || cleaned,
+        };
+      }
+    }
+  } catch (_) {}
+
+  // Nothing worked
+  throw new PostcodeError(
+    `Couldn't find "${cleaned}" — try a full postcode (e.g. LE1 2AB) or a town name (e.g. Leicester).`
+  );
 }
 
-// Lightweight client-side format check, used to give instant feedback
-// before hitting the network. Not a substitute for the real lookup above —
-// postcodes.io is the source of truth on whether a postcode actually exists.
 export function looksLikeUkPostcode(value) {
-  const v = value.trim().toUpperCase();
-  return /^[A-Z]{1,2}\d[A-Z\d]?(\s*\d[A-Z]{2})?$/.test(v);
+  return UK_POSTCODE_PATTERN.test(value.trim());
 }

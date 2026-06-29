@@ -30,6 +30,7 @@ function AppShell() {
   const [specialisms, setSpecialisms] = useState([]);
   const [postcodeInput, setPostcodeInput] = useState(DEFAULT_SEARCH.label);
   const [selectedGoals, setSelectedGoals] = useState(new Set());
+  const [maxDistance, setMaxDistance] = useState(''); // '' = any distance
   const [results, setResults] = useState(null);
   const [heading, setHeading] = useState('');
   const [searching, setSearching] = useState(false);
@@ -75,6 +76,8 @@ function AppShell() {
     setPostcodeInput,
     selectedGoals,
     setSelectedGoals,
+    maxDistance,
+    setMaxDistance,
     results,
     setResults,
     heading,

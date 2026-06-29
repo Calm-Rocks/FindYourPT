@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { searchPts, submitEnquiry } from '../lib/api';
 import { resolvePostcode, PostcodeError } from '../lib/postcode';
 import { useToast } from '../lib/ToastContext';
+import MultiSelectDropdown from '../components/MultiSelectDropdown';
+
+const DISTANCE_OPTIONS = [
+  { value: '1',  label: 'Within 1 mile' },
+  { value: '5',  label: 'Within 5 miles' },
+  { value: '10', label: 'Within 10 miles' },
+  { value: '20', label: 'Within 20 miles' },
+  { value: '50', label: 'Within 50 miles' },
+  { value: '',   label: 'Any distance' },
+];
 
 function initials(name) {
   return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -13,6 +23,8 @@ export default function SearchPage({
   setPostcodeInput,
   selectedGoals,
   setSelectedGoals,
+  maxDistance,
+  setMaxDistance,
   results,
   setResults,
   heading,
@@ -24,28 +36,16 @@ export default function SearchPage({
   const showToast = useToast();
   const [enquiryTarget, setEnquiryTarget] = useState(null);
 
-  function toggleGoal(slug) {
-    setSelectedGoals((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      return next;
-    });
-  }
+  const specialismOptions = specialisms.map((s) => ({ value: s.slug, label: s.label }));
 
   async function runSearch() {
     if (!postcodeInput.trim()) {
-      showToast('Enter a postcode to search.', { error: true });
+      showToast('Enter a postcode or town to search.', { error: true });
       return;
     }
     setSearching(true);
     try {
       const resolved = await resolvePostcode(postcodeInput);
-      if (!resolved) {
-        showToast("Couldn't find that postcode — try entering a full postcode like LE14 3AB.", { error: true });
-        setSearching(false);
-        return;
-      }
 
       const specialismIds = specialisms
         .filter((s) => selectedGoals.has(s.slug))
@@ -56,7 +56,9 @@ export default function SearchPage({
 
       const headingParts = [`Near ${resolved.postcode}`];
       if (selectedGoals.size > 0) {
-        headingParts.push(specialisms.filter((s) => selectedGoals.has(s.slug)).map((s) => s.label).join(', '));
+        headingParts.push(
+          specialisms.filter((s) => selectedGoals.has(s.slug)).map((s) => s.label).join(', ')
+        );
       }
       setHeading(headingParts.join(' — '));
     } catch (err) {
@@ -70,6 +72,16 @@ export default function SearchPage({
     }
   }
 
+  // Apply the client-side distance filter to search results.
+  // The DB already filters by each PT's own stated radius — this is an
+  // additional "how far am I willing to travel to a gym / how close do I
+  // want the PT to travel to me" cap from the client's perspective.
+  const filteredResults = results === null
+    ? null
+    : maxDistance === ''
+      ? results
+      : results.filter((pt) => pt.distance_miles <= Number(maxDistance));
+
   return (
     <>
       <div className="hero">
@@ -78,38 +90,49 @@ export default function SearchPage({
           <h1>Find the <em>specialist</em> trainer for your goal, nearby.</h1>
           <p className="sub">
             Hypertrophy, weight loss, gymnastics strength, pre/post-natal — search by what you
-            actually want to achieve, and we'll show you who's covering your postcode right now.
+            actually want to achieve, and we'll show you who's covering your area right now.
           </p>
 
           <div className="search-panel">
+            {/* Location */}
             <div>
-              <label className="field-label" htmlFor="postcode-input">Your postcode</label>
+              <label className="field-label" htmlFor="postcode-input">Postcode or town</label>
               <input
                 type="text"
                 id="postcode-input"
-                placeholder="e.g. S1 2JA"
+                placeholder="e.g. Leicester or LE1 2AB"
                 autoComplete="off"
                 value={postcodeInput}
                 onChange={(e) => setPostcodeInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
               />
             </div>
+
+            {/* Distance */}
+            <div>
+              <label className="field-label" htmlFor="distance-select">Distance</label>
+              <select
+                id="distance-select"
+                value={maxDistance}
+                onChange={(e) => setMaxDistance(e.target.value)}
+              >
+                {DISTANCE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Training Goal — multi-select dropdown */}
             <div>
               <span className="field-label" id="goal-label">Training goal</span>
-              <div className="tag-select" role="group" aria-labelledby="goal-label">
-                {specialisms.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`tag-btn${selectedGoals.has(s.slug) ? ' selected' : ''}`}
-                    aria-pressed={selectedGoals.has(s.slug)}
-                    onClick={() => toggleGoal(s.slug)}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+              <MultiSelectDropdown
+                options={specialismOptions}
+                selected={selectedGoals}
+                onChange={setSelectedGoals}
+                placeholder="Any goal"
+              />
             </div>
+
             <button className="btn-primary" onClick={runSearch} disabled={searching}>
               {searching ? 'Searching…' : 'Search'}
             </button>
@@ -119,27 +142,27 @@ export default function SearchPage({
 
       <div className="results-section">
         <div className="wrap">
-          {searching && results === null && (
+          {searching && filteredResults === null && (
             <p className="loading-text">Loading trainers…</p>
           )}
 
-          {results !== null && (
+          {filteredResults !== null && (
             <>
               <div className="results-meta">
                 <h2>{heading}</h2>
                 <span className="results-count">
-                  {results.length} {results.length === 1 ? 'trainer' : 'trainers'} found
+                  {filteredResults.length} {filteredResults.length === 1 ? 'trainer' : 'trainers'} found
                 </span>
               </div>
 
-              {results.length === 0 ? (
+              {filteredResults.length === 0 ? (
                 <div className="empty-state">
                   <h3>No trainers matched that search</h3>
-                  <p>Try a wider radius by searching a nearby postcode, or fewer goal filters.</p>
+                  <p>Try a wider distance, a different location, or fewer goal filters.</p>
                 </div>
               ) : (
                 <div className="card-grid">
-                  {results.map((pt) => (
+                  {filteredResults.map((pt) => (
                     <PtCard
                       key={pt.id}
                       pt={pt}
@@ -272,7 +295,6 @@ function EnquiryModal({ pt, onClose, onSent }) {
       <div className="modal">
         <h3>Enquire with {pt.display_name}</h3>
         <p>Your contact details go straight to {pt.display_name} so they can reach out directly.</p>
-
         <div className="form-row">
           <label className="field-label" htmlFor="enq-name">Your name</label>
           <input type="text" id="enq-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -286,7 +308,6 @@ function EnquiryModal({ pt, onClose, onSent }) {
           <textarea id="enq-message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="What are you hoping to work on?" />
         </div>
         {error && <p className="error-text">{error}</p>}
-
         <div className="modal-actions">
           <button className="btn-ghost on-light" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={handleSend} disabled={sending}>
