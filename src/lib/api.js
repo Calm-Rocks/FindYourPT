@@ -16,11 +16,12 @@ export async function fetchSpecialisms() {
 // Search
 // ---------------------------------------------------------------
 // specialismIds: array of smallint ids, or empty array / null for "no filter"
-export async function searchPts({ lat, lon, specialismIds }) {
+export async function searchPts({ lat, lon, specialismIds, ignoreRadius = false }) {
   const { data, error } = await supabase.rpc('search_pts', {
     client_lat: lat,
     client_lon: lon,
     specialism_filter: specialismIds && specialismIds.length > 0 ? specialismIds : null,
+    ignore_radius: ignoreRadius,
   });
   if (error) throw error;
 

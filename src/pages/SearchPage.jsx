@@ -51,7 +51,12 @@ export default function SearchPage({
         .filter((s) => selectedGoals.has(s.slug))
         .map((s) => s.id);
 
-      const matched = await searchPts({ lat: resolved.lat, lon: resolved.lon, specialismIds });
+      const matched = await searchPts({
+        lat: resolved.lat,
+        lon: resolved.lon,
+        specialismIds,
+        ignoreRadius: maxDistance === '',
+      });
       setResults(matched);
 
       const headingParts = [`Near ${resolved.postcode}`];

@@ -49,7 +49,7 @@ function AppShell() {
   useEffect(() => {
     if (specialisms.length === 0) return;
     setSearching(true);
-    searchPts({ lat: DEFAULT_SEARCH.lat, lon: DEFAULT_SEARCH.lon, specialismIds: [] })
+    searchPts({ lat: DEFAULT_SEARCH.lat, lon: DEFAULT_SEARCH.lon, specialismIds: [], ignoreRadius: true })
       .then((matched) => {
         setResults(matched);
         setHeading(`Near ${DEFAULT_SEARCH.label}`);
