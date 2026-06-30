@@ -51,6 +51,10 @@ If you already ran earlier migrations on a live project, just run whichever ones
 
 (`supabase/test_auth_stub.sql` and `supabase/test_storage_stub.sql` are **not** part of your real project — stand-ins used only to test migrations locally before deployment.)
 
+## Legal pages
+
+The Privacy Policy and Terms of Service live as markdown files in `src/legal/` and are rendered as real in-app pages (reachable from the footer) by a small purpose-built markdown renderer in `src/components/MarkdownDoc.jsx` — not a general markdown library, just enough to handle the headers/bold/tables/lists these two specific documents use. **Both documents contain placeholder text (contact email, address, retention period) marked clearly in the source — fill these in, and have a solicitor review both before they're relied on as legally binding**, especially once real payment processing is added.
+
 ## Image upload security
 
 Profile photos and gallery images go through three independent checks, deliberately not trusting each other:

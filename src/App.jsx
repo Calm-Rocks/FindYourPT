@@ -11,6 +11,7 @@ import EnquiriesPage from './pages/EnquiriesPage';
 import VerificationPage from './pages/VerificationPage';
 import AdminReviewPage from './pages/AdminReviewPage';
 import AdminPtOverviewPage from './pages/AdminPtOverviewPage';
+import LegalPage from './pages/LegalPage';
 
 // Default search centred on Leicester City centre (LE1 1RB).
 // Used on first load so the page shows results immediately rather than
@@ -28,6 +29,11 @@ function AppShell() {
   const [view, setView] = useState('client');
   const [clientSubview, setClientSubview] = useState({ name: 'search' });
   const [ptSubview, setPtSubview] = useState('dashboard');
+  // legalDoc holds { document: 'privacy' | 'terms', returnView: 'client' | 'pt' }
+  // while a legal page is open, null otherwise — null means "not viewing
+  // a legal page", so the main view/clientSubview/ptSubview state renders
+  // as normal.
+  const [legalDoc, setLegalDoc] = useState(null);
 
   // Search state lifted here so it survives navigating to a profile and back.
   const [specialisms, setSpecialisms] = useState([]);
@@ -121,40 +127,89 @@ function AppShell() {
       </div>
 
       <main>
-        {view === 'client' && (
-          clientSubview.name === 'profile' ? (
-            <PtProfilePage
-              ptId={clientSubview.ptId}
-              onBack={() => {
-                window.scrollTo(0, 0);
-                setClientSubview({ name: 'search' });
-              }}
-            />
-          ) : (
-            <SearchPage {...searchProps} />
-          )
-        )}
-        {view === 'pt' && (loading ? (
-          <div className="wrap"><p className="loading-text">Loading…</p></div>
-        ) : !user ? (
-          <AuthPage />
-        ) : ptSubview === 'dashboard' ? (
-          <DashboardOverviewPage onNavigate={setPtSubview} />
-        ) : ptSubview === 'manage-listing' ? (
-          <ManageListingPage onNavigate={setPtSubview} />
-        ) : ptSubview === 'verification' ? (
-          <VerificationPage onNavigate={setPtSubview} />
-        ) : ptSubview === 'admin-review' ? (
-          <AdminReviewPage onNavigate={setPtSubview} />
-        ) : ptSubview === 'admin-overview' ? (
-          <AdminPtOverviewPage onNavigate={setPtSubview} />
+        {legalDoc ? (
+          <LegalPage
+            document={legalDoc.document}
+            onBack={() => {
+              window.scrollTo(0, 0);
+              setView(legalDoc.returnView);
+              setLegalDoc(null);
+            }}
+          />
         ) : (
-          <EnquiriesPage onNavigate={setPtSubview} />
-        ))}
+          <>
+            {view === 'client' && (
+              clientSubview.name === 'profile' ? (
+                <PtProfilePage
+                  ptId={clientSubview.ptId}
+                  onBack={() => {
+                    window.scrollTo(0, 0);
+                    setClientSubview({ name: 'search' });
+                  }}
+                />
+              ) : (
+                <SearchPage {...searchProps} />
+              )
+            )}
+            {view === 'pt' && (loading ? (
+              <div className="wrap"><p className="loading-text">Loading…</p></div>
+            ) : !user ? (
+              <AuthPage />
+            ) : ptSubview === 'dashboard' ? (
+              <DashboardOverviewPage onNavigate={setPtSubview} />
+            ) : ptSubview === 'manage-listing' ? (
+              <ManageListingPage onNavigate={setPtSubview} />
+            ) : ptSubview === 'verification' ? (
+              <VerificationPage onNavigate={setPtSubview} />
+            ) : ptSubview === 'admin-review' ? (
+              <AdminReviewPage onNavigate={setPtSubview} />
+            ) : ptSubview === 'admin-overview' ? (
+              <AdminPtOverviewPage onNavigate={setPtSubview} />
+            ) : (
+              <EnquiriesPage onNavigate={setPtSubview} />
+            ))}
+          </>
+        )}
       </main>
 
       <footer>
-        <div className="wrap">
+        <div className="wrap footer-grid">
+          <div className="footer-brand">
+            <div className="footer-logo">
+              <span>SPOT</span>MY<span>PT</span>
+            </div>
+            <p className="footer-tagline">
+              Find a verified specialist personal trainer near you, or list your services and get found.
+            </p>
+            <p className="footer-copyright">© {new Date().getFullYear()} SpotMyPT. All rights reserved.</p>
+          </div>
+
+          <div className="footer-col">
+            <span className="footer-col-title">For clients</span>
+            <button className="footer-link" onClick={() => { goToClientView(); window.scrollTo(0, 0); }}>
+              Find a trainer
+            </button>
+          </div>
+
+          <div className="footer-col">
+            <span className="footer-col-title">For trainers</span>
+            <button className="footer-link" onClick={() => { goToPtView(); window.scrollTo(0, 0); }}>
+              List your services
+            </button>
+          </div>
+
+          <div className="footer-col">
+            <span className="footer-col-title">Legal</span>
+            <button className="footer-link" onClick={() => { setLegalDoc({ document: 'terms', returnView: view }); window.scrollTo(0, 0); }}>
+              Terms of Service
+            </button>
+            <button className="footer-link" onClick={() => { setLegalDoc({ document: 'privacy', returnView: view }); window.scrollTo(0, 0); }}>
+              Privacy Policy
+            </button>
+          </div>
+        </div>
+
+        <div className="wrap footer-fineprint">
           SpotMyPT — postcode lookups powered by postcodes.io. No payment processing in this
           build; listing tiers are illustrative pricing only.
         </div>
