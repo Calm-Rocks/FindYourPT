@@ -21,14 +21,41 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function trialBadge(trialExpiresAt) {
+function daysRemaining(trialExpiresAt) {
   if (!trialExpiresAt) return null;
   const expires = new Date(trialExpiresAt);
   const now = new Date();
-  const daysLeft = Math.ceil((expires - now) / (1000 * 60 * 60 * 24));
+  return Math.ceil((expires - now) / (1000 * 60 * 60 * 24));
+}
+
+function trialBadge(trialExpiresAt) {
+  const daysLeft = daysRemaining(trialExpiresAt);
+  if (daysLeft === null) return null;
   if (daysLeft < 0) return { text: 'Trial expired', className: 'inactive' };
   if (daysLeft <= 7) return { text: `Trial ends in ${daysLeft}d`, className: 'inactive' };
   return { text: `On trial · ends ${formatDate(trialExpiresAt)}`, className: 'active' };
+}
+
+// Determines what the dropdown should actually show right now: 'No trial'
+// if there's no expiry set, one of the preset durations if the remaining
+// days happen to match a preset closely (within a day, to absorb
+// rendering-time rounding), or a synthetic "current" option describing
+// the real remaining time — since once any time has passed, a trainer
+// originally given 90 days no longer HAS 90 days left, and silently
+// relabelling that as one of the presets would misrepresent their actual
+// status to whoever's looking at this screen.
+function resolveTrialSelectState(trialExpiresAt) {
+  const daysLeft = daysRemaining(trialExpiresAt);
+  if (daysLeft === null) return { selectValue: '', customOption: null };
+  if (daysLeft < 0) return { selectValue: '__expired__', customOption: { value: '__expired__', label: 'Expired — pick a new period' } };
+
+  const matchingPreset = TRIAL_OPTIONS.find((opt) => opt.value !== '' && Math.abs(Number(opt.value) - daysLeft) <= 1);
+  if (matchingPreset) return { selectValue: matchingPreset.value, customOption: null };
+
+  return {
+    selectValue: '__current__',
+    customOption: { value: '__current__', label: `Current: ${daysLeft}d left (${formatDate(trialExpiresAt)})` },
+  };
 }
 
 export default function AdminPtOverviewPage({ onNavigate }) {
@@ -140,14 +167,22 @@ export default function AdminPtOverviewPage({ onNavigate }) {
                 <label className="field-label" style={{ marginBottom: 0 }} htmlFor={`trial-${pt.id}`}>Trial</label>
                 <select
                   id={`trial-${pt.id}`}
-                  value=""
+                  value={resolveTrialSelectState(pt.trial_expires_at).selectValue}
                   disabled={savingId === pt.id}
-                  onChange={(e) => { if (e.target.value !== '__noop__') handleTrialChange(pt, e.target.value); }}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    // __current__ and __expired__ are display-only states reflecting
+                    // existing data, not real selections — picking a genuine preset
+                    // (including '' for "No trial") is what actually changes anything.
+                    if (v === '__current__' || v === '__expired__') return;
+                    handleTrialChange(pt, v);
+                  }}
                   style={{ width: 'auto', minWidth: 160 }}
                 >
-                  <option value="__noop__" disabled>
-                    {savingId === pt.id ? 'Saving…' : 'Set trial period…'}
-                  </option>
+                  {(() => {
+                    const { customOption } = resolveTrialSelectState(pt.trial_expires_at);
+                    return customOption ? <option value={customOption.value}>{customOption.label}</option> : null;
+                  })()}
                   {TRIAL_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
