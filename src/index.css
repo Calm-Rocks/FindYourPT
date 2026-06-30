@@ -148,7 +148,75 @@ a{ color: inherit; }
   .filter-pills{ flex-wrap: nowrap; flex-shrink: 0; }
   .filter-pill-dropdown{ flex-shrink: 0; }
   .filter-bar .btn-primary{ flex-shrink: 0; }
+
+  /* On mobile, distance pills + goal select move into the slide-up sheet
+     instead of the horizontal-scroll row — replaced by a single Filters
+     trigger button. desktop-only-filters / mobile-only-filters are set
+     by the component based on viewport, but we also hide via CSS as a
+     belt-and-braces guard against any render-order flash. */
+  .desktop-only-filters{ display: none; }
 }
+@media (min-width: 701px){
+  .mobile-only-filters{ display: none; }
+}
+
+.filter-trigger-btn{
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 600;
+  padding: 9px 16px; border-radius: 999px; border: 1.5px solid var(--line);
+  background: transparent; color: var(--paper); cursor: pointer; white-space: nowrap;
+  flex-shrink: 0;
+}
+.filter-trigger-btn.has-active{ border-color: var(--olive); }
+.filter-trigger-badge{
+  background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* ---------- Mobile filter bottom sheet ---------- */
+.filter-sheet-backdrop{
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  z-index: 200; display: flex; align-items: flex-end;
+  animation: filter-sheet-fade .15s ease-out;
+}
+@keyframes filter-sheet-fade{ from{ opacity: 0; } to{ opacity: 1; } }
+
+.filter-sheet{
+  background: var(--paper); color: var(--ink);
+  width: 100%; max-height: 80vh; overflow-y: auto;
+  border-radius: 16px 16px 0 0; padding: 8px 20px 20px;
+  animation: filter-sheet-slide-up .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes filter-sheet-slide-up{ from{ transform: translateY(100%); } to{ transform: translateY(0); } }
+
+.filter-sheet-handle{
+  width: 36px; height: 4px; border-radius: 999px; background: var(--line-dark);
+  margin: 0 auto 14px;
+}
+.filter-sheet-header{
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;
+}
+.filter-sheet-header h3{ font-size: 20px; }
+.filter-sheet-close{
+  background: none; border: none; font-size: 18px; color: var(--steel); cursor: pointer;
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+}
+.filter-sheet-body{ display: flex; flex-direction: column; gap: 22px; }
+.filter-sheet-section-label{
+  font-family: 'Barlow Condensed', sans-serif; text-transform: uppercase;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--steel);
+  display: block; margin-bottom: 10px;
+}
+.filter-sheet-pills{ display: flex; flex-wrap: wrap; gap: 8px; }
+.filter-sheet-pills .filter-pill{ color: var(--ink); border-color: var(--line-dark); }
+.filter-sheet-pills .filter-pill:hover{ border-color: var(--olive); }
+.filter-sheet-checklist{ display: flex; flex-direction: column; gap: 2px; }
+.filter-sheet-checkbox-row{
+  display: flex; align-items: center; gap: 10px; padding: 9px 0; cursor: pointer; font-size: 14.5px;
+}
+.filter-sheet-checkbox-row input[type="checkbox"]{ width: 17px; height: 17px; accent-color: var(--olive); }
+.filter-sheet-footer{ margin-top: 4px; }
 
 .field-label{
   font-family:'Barlow Condensed', sans-serif; text-transform: uppercase;
@@ -364,6 +432,8 @@ textarea{
 .enquiry-row .name{ font-weight: 700; }
 .enquiry-row .date{ font-family:'Roboto Mono', monospace; font-size: 12px; color: var(--steel); }
 .enquiry-row .contact{ font-family:'Roboto Mono', monospace; font-size: 13px; color: var(--accent-dim); margin-top: 4px; }
+.enquiry-row .contact a{ text-decoration: none; }
+.enquiry-row .contact a:hover{ text-decoration: underline; }
 .enquiry-row .msg{ font-size: 14px; color: var(--ink-soft); margin-top: 8px; line-height: 1.4; }
 
 .status-pill{

@@ -3,6 +3,25 @@ import { useAuth } from '../lib/AuthContext';
 import { useToast } from '../lib/ToastContext';
 import { fetchOwnEnquiries } from '../lib/api';
 
+// The enquiry form just asks for "email or phone" as free text, so we
+// can't assume which one a given submission is — detect by shape and
+// link accordingly. A simple @ check is enough here since this only
+// decides which link scheme to use, not whether the contact is valid.
+function ContactLink({ contact }) {
+  const trimmed = contact.trim();
+  if (trimmed.includes('@')) {
+    return <a href={`mailto:${trimmed}`} style={{ color: 'inherit' }}>{trimmed}</a>;
+  }
+  // Strip everything except leading + and digits for the tel: link itself
+  // (display text stays as entered, since formatting like spaces or
+  // brackets is part of how the PT will recognise the number).
+  const telHref = trimmed.replace(/[^\d+]/g, '');
+  if (telHref) {
+    return <a href={`tel:${telHref}`} style={{ color: 'inherit' }}>{trimmed}</a>;
+  }
+  return <>{trimmed}</>;
+}
+
 export default function EnquiriesPage({ onNavigate }) {
   const { user } = useAuth();
   const showToast = useToast();
@@ -51,7 +70,7 @@ export default function EnquiriesPage({ onNavigate }) {
               <span className="name">{enq.client_name}</span>
               <span className="date">{new Date(enq.created_at).toLocaleDateString()}</span>
             </div>
-            <div className="contact">{enq.client_contact}</div>
+            <div className="contact"><ContactLink contact={enq.client_contact} /></div>
             {enq.message && <div className="msg">{enq.message}</div>}
           </div>
         ))

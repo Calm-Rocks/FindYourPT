@@ -3,6 +3,7 @@ import { searchPts, submitEnquiry } from '../lib/api';
 import { resolvePostcode, PostcodeError } from '../lib/postcode';
 import { useToast } from '../lib/ToastContext';
 import PillMultiSelect from '../components/PillMultiSelect';
+import FilterSheet from '../components/FilterSheet';
 
 const DISTANCE_OPTIONS = [
   { value: '',   label: 'Any distance' },
@@ -37,6 +38,7 @@ export default function SearchPage({
 }) {
   const showToast = useToast();
   const [enquiryTarget, setEnquiryTarget] = useState(null);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const isFirstRender = useRef(true);
 
   const specialismOptions = specialisms.map((s) => ({ value: s.slug, label: s.label }));
@@ -133,7 +135,10 @@ export default function SearchPage({
         </div>
       </div>
 
-      {/* Sticky filter bar — pins to top on scroll so filters are always reachable */}
+      {/* Sticky filter bar — pins to top on scroll so filters are always reachable.
+          Desktop: distance pills + goal select shown inline.
+          Mobile: collapses to a single Filters button opening a bottom sheet,
+          so the bar stays compact and the sticky header doesn't eat the screen. */}
       <div className="filter-bar">
         <div className="wrap filter-bar-inner">
           <div className="filter-location">
@@ -148,7 +153,8 @@ export default function SearchPage({
             />
           </div>
 
-          <div className="filter-pills">
+          {/* Desktop-only: inline pills */}
+          <div className="filter-pills desktop-only-filters">
             {DISTANCE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -161,22 +167,89 @@ export default function SearchPage({
             ))}
           </div>
 
-          <PillMultiSelect
-            options={specialismOptions}
-            selected={selectedGoals}
-            onChange={setSelectedGoals}
-            placeholder="Any goal"
-          />
+          <div className="desktop-only-filters">
+            <PillMultiSelect
+              options={specialismOptions}
+              selected={selectedGoals}
+              onChange={setSelectedGoals}
+              placeholder="Any goal"
+            />
+          </div>
 
           {hasActiveFilters && (
-            <button className="filter-clear" onClick={clearFilters}>Clear filters</button>
+            <button className="filter-clear desktop-only-filters" onClick={clearFilters}>Clear filters</button>
           )}
+
+          {/* Mobile-only: single trigger opening the bottom sheet */}
+          <button
+            type="button"
+            className={`filter-trigger-btn mobile-only-filters${hasActiveFilters ? ' has-active' : ''}`}
+            onClick={() => setFilterSheetOpen(true)}
+          >
+            Filters
+            {hasActiveFilters && (
+              <span className="filter-trigger-badge">
+                {(maxDistance !== '' ? 1 : 0) + selectedGoals.size}
+              </span>
+            )}
+          </button>
 
           <button className="btn-primary" onClick={() => runSearch()} disabled={searching} style={{ marginLeft: 'auto' }}>
             {searching ? '…' : 'Search'}
           </button>
         </div>
       </div>
+
+      <FilterSheet
+        open={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        resultCount={results !== null ? results.length : null}
+      >
+        <div>
+          <span className="filter-sheet-section-label">Distance</span>
+          <div className="filter-sheet-pills">
+            {DISTANCE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`filter-pill${maxDistance === opt.value ? ' selected' : ''}`}
+                onClick={() => setMaxDistance(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="filter-sheet-section-label">Training goal</span>
+          <div className="filter-sheet-checklist">
+            {specialismOptions.map((opt) => (
+              <label key={opt.value} className="filter-sheet-checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={selectedGoals.has(opt.value)}
+                  onChange={() => {
+                    setSelectedGoals((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(opt.value)) next.delete(opt.value);
+                      else next.add(opt.value);
+                      return next;
+                    });
+                  }}
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {hasActiveFilters && (
+          <button className="filter-clear" onClick={clearFilters} style={{ alignSelf: 'flex-start' }}>
+            Clear filters
+          </button>
+        )}
+      </FilterSheet>
 
       <div className="results-section">
         <div className="wrap">
