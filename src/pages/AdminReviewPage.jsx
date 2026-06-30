@@ -140,13 +140,13 @@ export default function AdminReviewPage({ onNavigate }) {
                   onChange={(e) => setRejectionReason(e.target.value)}
                   style={{ marginBottom: 10 }}
                 />
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   <button className="btn-ghost on-light" onClick={() => setRejectingId(null)}>Cancel</button>
                   <button className="btn-primary" onClick={() => handleConfirmReject(sub)}>Confirm rejection</button>
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+              <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
                 <button className="btn-primary" onClick={() => handleApprove(sub)}>Approve</button>
                 <button className="btn-danger-text" onClick={() => startReject(sub.id)}>Reject</button>
               </div>

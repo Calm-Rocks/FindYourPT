@@ -59,7 +59,7 @@ export default function DashboardOverviewPage({ onNavigate }) {
     <div className="wrap" style={{ paddingTop: 40, paddingBottom: 80 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ fontSize: 32 }}>Your dashboard</h1>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {isAdmin && (
             <button className="btn-ghost" onClick={() => onNavigate('admin-review')}>
               Admin review queue

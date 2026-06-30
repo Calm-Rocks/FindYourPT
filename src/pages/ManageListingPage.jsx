@@ -233,7 +233,7 @@ export default function ManageListingPage({ onNavigate }) {
         <h2>{hadExistingProfile ? 'Edit your listing' : 'Create your listing'}</h2>
         <p className="form-sub">This is what clients see when they search.</p>
 
-        <div className="form-row" style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        <div className="form-row" style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
           <div
             style={{
               width: 84, height: 84, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
