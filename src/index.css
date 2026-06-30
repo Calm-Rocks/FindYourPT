@@ -157,7 +157,7 @@ a{ color: inherit; }
   .desktop-only-filters{ display: none; }
 }
 @media (min-width: 701px){
-  .mobile-only-filters{ display: none; }
+  .filter-bar .mobile-only-filters{ display: none; }
 }
 
 .filter-trigger-btn{
