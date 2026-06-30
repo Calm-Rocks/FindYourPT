@@ -33,7 +33,20 @@ export default function AuthPage() {
         showToast('Logged in.');
       }
     } catch (err) {
-      setError(err.message || 'Something went wrong.');
+      // Defensive: Supabase errors normally have .message, but network
+      // failures, rate-limit responses, or other non-standard error
+      // shapes can come through without one — in which case err.message
+      // is undefined and `undefined || 'Something went wrong.'` should
+      // fall through correctly. The previous bug was rendering `{}`
+      // instead, which means something was reaching setError as an
+      // object rather than a string — logging the raw error here so it's
+      // visible in the browser console for diagnosis if it recurs.
+      console.error('Auth error:', err);
+      const message =
+        (typeof err?.message === 'string' && err.message) ||
+        (typeof err === 'string' && err) ||
+        'Something went wrong — please try again.';
+      setError(message);
     } finally {
       setSubmitting(false);
     }
