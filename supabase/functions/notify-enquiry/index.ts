@@ -8,7 +8,7 @@
 // Project Settings → Edge Functions → Secrets):
 //   RESEND_API_KEY     — your Resend API key
 //   RESEND_FROM_EMAIL  — your verified Resend sending address
-//                        e.g. noreply@findyourpt.resend.dev
+//                        e.g. noreply@spotmypt.com
 //   SUPABASE_URL       — your project URL (auto-injected by Supabase)
 //   SUPABASE_SERVICE_ROLE_KEY — full-access key for server-side DB lookups
 //                               (auto-injected by Supabase)
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; padding: 32px 24px; color: #1A1A1A;">
         <h1 style="font-size: 22px; margin-bottom: 8px;">New enquiry, ${ptName}</h1>
         <p style="color: #6B6F76; margin-bottom: 24px;">
-          Someone found your FindYourPT listing and wants to get in touch.
+          Someone found your SpotMyPT listing and wants to get in touch.
         </p>
 
         <table style="width: 100%; border-collapse: collapse; background: #F5F3EE; border-radius: 4px; overflow: hidden;">
@@ -93,12 +93,12 @@ Deno.serve(async (req) => {
         <p style="margin-top: 24px; font-size: 14px; color: #6B6F76;">
           Reply directly to <strong>${escapeHtml(enquiry.client_contact)}</strong> to get in touch.
           You can also view all your enquiries in your
-          <a href="${Deno.env.get('SITE_URL') ?? 'https://findyourpt.com'}" style="color: #FF5A3C;">FindYourPT dashboard</a>.
+          <a href="${Deno.env.get('SITE_URL') ?? 'https://spotmypt.com'}" style="color: #FF5A3C;">SpotMyPT dashboard</a>.
         </p>
 
         <hr style="border: none; border-top: 1px solid #EAE7DF; margin: 24px 0;" />
         <p style="font-size: 12px; color: #6B6F76; margin: 0;">
-          You're receiving this because you have an active listing on FindYourPT.
+          You're receiving this because you have an active listing on SpotMyPT.
         </p>
       </div>
     `;
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: fromEmail,
         to: [ptEmail],
-        subject: `New enquiry from ${enquiry.client_name} — FindYourPT`,
+        subject: `New enquiry from ${enquiry.client_name} — SpotMyPT`,
         html: emailHtml,
       }),
     });

@@ -1,4 +1,4 @@
-# FindYourPT
+# SpotMyPT
 
 A directory/matching service for personal trainers. Clients search by postcode and
 specialism (hypertrophy, weight loss, gymnastics strength, etc.); trainers create an

@@ -104,7 +104,7 @@ export default function DashboardOverviewPage({ onNavigate }) {
         <div className="empty-state" style={{ marginBottom: 28, textAlign: 'left' }}>
           <h3>Your listing isn't visible to clients yet</h3>
           <p>
-            FindYourPT verifies every trainer's qualification and insurance before they appear in
+            SpotMyPT verifies every trainer's qualification and insurance before they appear in
             search. {profile.verification_status === 'pending'
               ? 'Your documents are awaiting review.'
               : profile.verification_status === 'rejected'

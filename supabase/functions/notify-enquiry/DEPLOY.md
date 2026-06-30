@@ -48,7 +48,7 @@ Add all four:
 | Secret name             | Value                                         |
 |-------------------------|-----------------------------------------------|
 | `RESEND_API_KEY`        | Your Resend API key                           |
-| `RESEND_FROM_EMAIL`     | e.g. `noreply@findyourpt.resend.dev`          |
+| `RESEND_FROM_EMAIL`     | e.g. `noreply@spotmypt.com`          |
 | `SITE_URL`              | Your Netlify URL e.g. `https://trainernearme.netlify.app` |
 
 (`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically

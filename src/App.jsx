@@ -107,7 +107,7 @@ function AppShell() {
       <div className="topbar">
         <div className="wrap">
           <a href="#" className="logo" onClick={(e) => { e.preventDefault(); goToClientView(); }}>
-            FIND<span>YOUR</span>PT
+            <span>SPOT</span>MYPT
           </a>
           <nav className="nav-tabs">
             <button className={`nav-tab${view === 'client' ? ' active' : ''}`} onClick={goToClientView}>
@@ -155,7 +155,7 @@ function AppShell() {
 
       <footer>
         <div className="wrap">
-          FindYourPT — postcode lookups powered by postcodes.io. No payment processing in this
+          SpotMyPT — postcode lookups powered by postcodes.io. No payment processing in this
           build; listing tiers are illustrative pricing only.
         </div>
       </footer>

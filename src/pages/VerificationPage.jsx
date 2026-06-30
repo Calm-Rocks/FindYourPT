@@ -7,7 +7,7 @@ import { uploadVerificationDoc } from '../lib/documentUpload';
 const STATUS_COPY = {
   unverified: {
     title: 'Get verified',
-    body: 'Upload your PT qualification certificate and proof of public liability insurance. Once approved, your listing becomes visible to clients searching FindYourPT.',
+    body: 'Upload your PT qualification certificate and proof of public liability insurance. Once approved, your listing becomes visible to clients searching SpotMyPT.',
   },
   pending: {
     title: 'Verification pending',

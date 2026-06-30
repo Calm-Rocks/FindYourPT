@@ -94,7 +94,7 @@ export default function AdminReviewPage({ onNavigate }) {
       <div className="wrap" style={{ paddingTop: 40, paddingBottom: 80 }}>
         <div className="empty-state">
           <h3>Not authorized</h3>
-          <p>This page is only available to FindYourPT admins.</p>
+          <p>This page is only available to SpotMyPT admins.</p>
         </div>
       </div>
     );
