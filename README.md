@@ -45,6 +45,7 @@ In your Supabase project dashboard, open **SQL Editor**, and run these files **i
 5. `supabase/migrations/0005_search_profile_photo_fix.sql` — fixes a bug where `search_pts` never returned `profile_photo_url`.
 6. `supabase/migrations/0006_any_distance_search.sql` — adds an `ignore_radius` parameter so a client selecting "Any distance" sees all active trainers, not just those whose own coverage radius happens to reach the search location.
 7. `supabase/migrations/0007_verification.sql` — adds trainer verification: an `is_admin` flag, a `verification_status` on each listing, a `verification_submissions` table, a **private** storage bucket for certificates/insurance documents, and updates `search_pts` so only `approved` listings appear in client search. **After running this migration, you must make yourself an admin manually** — see the comment block at the top of the file for the exact SQL.
+8. `supabase/migrations/0008_trial_and_admin_overview.sql` — adds `trial_expires_at` to `pts` (for tracking free-trial trainers during early outreach) and a `get_admin_pt_overview()` function giving admins a single-call view of every trainer's enquiry count, verification status, and trial status — used by the "Trainer overview" admin page.
 
 If you already ran earlier migrations on a live project, just run whichever ones you're missing — they're all additive and won't touch existing trainer or enquiry data.
 

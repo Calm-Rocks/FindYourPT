@@ -275,6 +275,25 @@ export async function getSignedDocumentUrl(path) {
   if (error) throw error;
   return data.signedUrl;
 }
+
+// ---------------------------------------------------------------
+// Admin: PT overview (enquiry counts, trial status) for go-to-market
+// tracking — who's on a free trial, how many real enquiries has each
+// trainer actually received.
+// ---------------------------------------------------------------
+export async function fetchAdminPtOverview() {
+  const { data, error } = await supabase.rpc('get_admin_pt_overview');
+  if (error) throw error;
+  return data;
+}
+
+export async function setTrialExpiry(ptId, expiresAt) {
+  const { error } = await supabase
+    .from('pts')
+    .update({ trial_expires_at: expiresAt })
+    .eq('id', ptId);
+  if (error) throw error;
+}
 export async function submitEnquiry({ ptId, clientName, clientContact, message, clientPostcode }) {
   const { error } = await supabase.from('enquiries').insert({
     pt_id: ptId,

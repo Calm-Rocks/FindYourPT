@@ -61,9 +61,14 @@ export default function DashboardOverviewPage({ onNavigate }) {
         <h1 style={{ fontSize: 32 }}>Your dashboard</h1>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {isAdmin && (
-            <button className="btn-ghost" onClick={() => onNavigate('admin-review')}>
-              Admin review queue
-            </button>
+            <>
+              <button className="btn-ghost" onClick={() => onNavigate('admin-overview')}>
+                Trainer overview
+              </button>
+              <button className="btn-ghost" onClick={() => onNavigate('admin-review')}>
+                Admin review queue
+              </button>
+            </>
           )}
           <button className="btn-ghost" onClick={signOut}>Log out</button>
         </div>
