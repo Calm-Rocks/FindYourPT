@@ -42,7 +42,7 @@ export default function AuthPage() {
   return (
     <div className="hero" style={{ paddingBottom: 56, borderBottom: 'none' }}>
       <div className="wrap" style={{ maxWidth: 480, textAlign: 'center' }}>
-        <h1 style={{ fontSize: 40 }}>List your <em>specialism</em>, get found.</h1>
+        <h1 style={{ fontSize: 40 }}>Get listed. <em>Get found.</em></h1>
         <p className="sub" style={{ margin: '16px auto 0', maxWidth: 380 }}>
           {mode === 'signup'
             ? 'Create a trainer account to set up your listing.'
