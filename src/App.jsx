@@ -36,6 +36,12 @@ function AppShell() {
   const [results, setResults] = useState(null);
   const [heading, setHeading] = useState('');
   const [searching, setSearching] = useState(false);
+  // The last successfully resolved search location ({lat, lon, postcode}).
+  // Lifted to App (not a local ref inside SearchPage) so it survives both
+  // navigating away/back AND the initial default-location search, letting
+  // distance/goal pill changes re-search instantly without re-resolving
+  // the location text each time.
+  const [lastLocation, setLastLocation] = useState(null);
 
   // Load specialisms once at app level so they're available immediately
   // when SearchPage mounts, without a second fetch on return from profile.
@@ -55,6 +61,7 @@ function AppShell() {
       .then((matched) => {
         setResults(matched);
         setHeading(`Near ${DEFAULT_SEARCH.label}`);
+        setLastLocation({ lat: DEFAULT_SEARCH.lat, lon: DEFAULT_SEARCH.lon, postcode: DEFAULT_SEARCH.label });
       })
       .catch(() => {
         // Non-fatal — just leave the page blank rather than error on first load
@@ -86,6 +93,8 @@ function AppShell() {
     setHeading,
     searching,
     setSearching,
+    lastLocation,
+    setLastLocation,
     onViewProfile: (ptId) => {
       window.scrollTo(0, 0);
       setClientSubview({ name: 'profile', ptId });

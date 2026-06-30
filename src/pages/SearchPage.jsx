@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { searchPts, submitEnquiry } from '../lib/api';
 import { resolvePostcode, PostcodeError } from '../lib/postcode';
 import { useToast } from '../lib/ToastContext';
-import MultiSelectDropdown from '../components/MultiSelectDropdown';
+import PillMultiSelect from '../components/PillMultiSelect';
 
 const DISTANCE_OPTIONS = [
-  { value: '1',  label: 'Within 1 mile' },
-  { value: '5',  label: 'Within 5 miles' },
-  { value: '10', label: 'Within 10 miles' },
-  { value: '20', label: 'Within 20 miles' },
-  { value: '50', label: 'Within 50 miles' },
   { value: '',   label: 'Any distance' },
+  { value: '1',  label: '1 mi' },
+  { value: '5',  label: '5 mi' },
+  { value: '10', label: '10 mi' },
+  { value: '20', label: '20 mi' },
+  { value: '50', label: '50 mi' },
 ];
 
 function initials(name) {
@@ -31,22 +31,43 @@ export default function SearchPage({
   setHeading,
   searching,
   setSearching,
+  lastLocation,
+  setLastLocation,
   onViewProfile,
 }) {
   const showToast = useToast();
   const [enquiryTarget, setEnquiryTarget] = useState(null);
+  const isFirstRender = useRef(true);
 
   const specialismOptions = specialisms.map((s) => ({ value: s.slug, label: s.label }));
 
-  async function runSearch() {
-    if (!postcodeInput.trim()) {
+  async function runSearch(overridePostcode) {
+    const queryText = overridePostcode ?? postcodeInput;
+    if (!queryText.trim()) {
       showToast('Enter a postcode or town to search.', { error: true });
       return;
     }
     setSearching(true);
     try {
-      const resolved = await resolvePostcode(postcodeInput);
+      const resolved = await resolvePostcode(queryText);
+      setLastLocation(resolved);
+      await runSearchAtLocation(resolved);
+    } catch (err) {
+      if (err instanceof PostcodeError) {
+        showToast(err.message, { error: true });
+      } else {
+        showToast('Search failed — please try again in a moment.', { error: true });
+      }
+      setSearching(false);
+    }
+  }
 
+  // Re-runs the search against an already-resolved location — used both
+  // by the initial location submit and by pill changes, so changing
+  // distance/goals doesn't need to re-hit the postcode API at all.
+  async function runSearchAtLocation(resolved) {
+    setSearching(true);
+    try {
       const specialismIds = specialisms
         .filter((s) => selectedGoals.has(s.slug))
         .map((s) => s.id);
@@ -67,113 +88,124 @@ export default function SearchPage({
       }
       setHeading(headingParts.join(' — '));
     } catch (err) {
-      if (err instanceof PostcodeError) {
-        showToast(err.message, { error: true });
-      } else {
-        showToast('Search failed — please try again in a moment.', { error: true });
-      }
+      showToast('Search failed — please try again in a moment.', { error: true });
     } finally {
       setSearching(false);
     }
   }
 
-  // Apply the client-side distance filter to search results.
-  // The DB already filters by each PT's own stated radius — this is an
-  // additional "how far am I willing to travel to a gym / how close do I
-  // want the PT to travel to me" cap from the client's perspective.
-  const filteredResults = results === null
-    ? null
-    : maxDistance === ''
-      ? results
-      : results.filter((pt) => pt.distance_miles <= Number(maxDistance));
+  // Live re-filter when distance or goals change, IF a location has
+  // already been resolved (i.e. a search has run at least once). This is
+  // the core of the "fluid" interaction — adjusting a pill updates results
+  // without pressing a button. Debounced slightly so rapid multi-pill
+  // clicks don't fire a request per click.
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!lastLocation) return;
+
+    const timer = setTimeout(() => {
+      runSearchAtLocation(lastLocation);
+    }, 250);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxDistance, selectedGoals]);
+
+  function clearFilters() {
+    setMaxDistance('');
+    setSelectedGoals(new Set());
+  }
+
+  const hasActiveFilters = maxDistance !== '' || selectedGoals.size > 0;
 
   return (
     <>
-      <div className="hero">
+      <div className="hero" style={{ paddingBottom: 32 }}>
         <div className="wrap">
-          <span className="eyebrow">01 — Search by goal, not guesswork</span>
+          <span className="eyebrow">Find a specialist, fast</span>
           <h1>Find the <em>specialist</em> trainer for your goal, nearby.</h1>
           <p className="sub">
-            Hypertrophy, weight loss, gymnastics strength, pre/post-natal — search by what you
-            actually want to achieve, and we'll show you who's covering your area right now.
+            Search by what you actually want to achieve, and we'll show you who's covering your
+            area right now — adjust filters below and results update instantly.
           </p>
+        </div>
+      </div>
 
-          <div className="search-panel">
-            {/* Location */}
-            <div>
-              <label className="field-label" htmlFor="postcode-input">Postcode or town</label>
-              <input
-                type="text"
-                id="postcode-input"
-                placeholder="e.g. Leicester or LE1 2AB"
-                autoComplete="off"
-                value={postcodeInput}
-                onChange={(e) => setPostcodeInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
-              />
-            </div>
-
-            {/* Distance */}
-            <div>
-              <label className="field-label" htmlFor="distance-select">Distance</label>
-              <select
-                id="distance-select"
-                value={maxDistance}
-                onChange={(e) => setMaxDistance(e.target.value)}
-              >
-                {DISTANCE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Training Goal — multi-select dropdown */}
-            <div>
-              <span className="field-label" id="goal-label">Training goal</span>
-              <MultiSelectDropdown
-                options={specialismOptions}
-                selected={selectedGoals}
-                onChange={setSelectedGoals}
-                placeholder="Any goal"
-              />
-            </div>
-
-            <button className="btn-primary" onClick={runSearch} disabled={searching}>
-              {searching ? 'Searching…' : 'Search'}
-            </button>
+      {/* Sticky filter bar — pins to top on scroll so filters are always reachable */}
+      <div className="filter-bar">
+        <div className="wrap filter-bar-inner">
+          <div className="filter-location">
+            <span className="filter-location-icon">⌖</span>
+            <input
+              type="text"
+              placeholder="Postcode or town"
+              autoComplete="off"
+              value={postcodeInput}
+              onChange={(e) => setPostcodeInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') runSearch(); }}
+            />
           </div>
+
+          <div className="filter-pills">
+            {DISTANCE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`filter-pill${maxDistance === opt.value ? ' selected' : ''}`}
+                onClick={() => setMaxDistance(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <PillMultiSelect
+            options={specialismOptions}
+            selected={selectedGoals}
+            onChange={setSelectedGoals}
+            placeholder="Any goal"
+          />
+
+          {hasActiveFilters && (
+            <button className="filter-clear" onClick={clearFilters}>Clear filters</button>
+          )}
+
+          <button className="btn-primary" onClick={() => runSearch()} disabled={searching} style={{ marginLeft: 'auto' }}>
+            {searching ? '…' : 'Search'}
+          </button>
         </div>
       </div>
 
       <div className="results-section">
         <div className="wrap">
-          {searching && filteredResults === null && (
+          {searching && results === null && (
             <p className="loading-text">Loading trainers…</p>
           )}
 
-          {filteredResults !== null && (
+          {results !== null && (
             <>
               <div className="results-meta">
                 <h2>{heading}</h2>
                 <span className="results-count">
-                  {filteredResults.length} {filteredResults.length === 1 ? 'trainer' : 'trainers'} found
+                  {results.length} {results.length === 1 ? 'trainer' : 'trainers'} found
                 </span>
               </div>
 
-              {filteredResults.length === 0 ? (
+              {results.length === 0 ? (
                 <div className="empty-state">
                   <h3>No trainers matched that search</h3>
                   <p>Try a wider distance, a different location, or fewer goal filters.</p>
                 </div>
               ) : (
-                <div className="card-grid">
-                  {filteredResults.map((pt) => (
-                    <PtCard
+                <div className={`card-grid${searching ? ' results-pulse' : ''}`}>
+                  {results.map((pt) => (
+                    <PtCardCompact
                       key={pt.id}
                       pt={pt}
-                      selectedGoals={selectedGoals}
                       onEnquire={() => setEnquiryTarget(pt)}
-                      onViewProfile={() => { onViewProfile(pt.id); }}
+                      onViewProfile={() => onViewProfile(pt.id)}
                     />
                   ))}
                 </div>
@@ -197,23 +229,20 @@ export default function SearchPage({
   );
 }
 
-function PtCard({ pt, selectedGoals, onEnquire, onViewProfile }) {
-  const locationLine = pt.match_via === 'gym' && pt.gym_name
-    ? `Trains at ${pt.gym_name} (${pt.gym_postcode})`
-    : `${pt.postcode} · covers ${pt.radius_miles} mi`;
-
-  const socialLinks = [
-    pt.website_url ? { label: 'Website', href: pt.website_url } : null,
-    pt.instagram_url ? { label: 'Instagram', href: pt.instagram_url } : null,
-    pt.facebook_url ? { label: 'Facebook', href: pt.facebook_url } : null,
-  ].filter(Boolean);
+// Quick-glance card: name, photo, top 2 specialisms, distance, price.
+// Full bio/gym detail/gallery/socials live on the profile page only —
+// reduces what someone has to scan per card so a results page of 10+
+// trainers stays easy to compare at a glance.
+function PtCardCompact({ pt, onEnquire, onViewProfile }) {
+  const topTags = pt.specialisms.slice(0, 2);
+  const extraCount = pt.specialisms.length - topTags.length;
 
   return (
     <a
-      className="pt-card"
+      className="pt-card-compact"
       href="#"
       onClick={(e) => { e.preventDefault(); onViewProfile(); }}
-      style={{ cursor: 'pointer', textDecoration: 'none', display: 'grid' }}
+      style={{ cursor: 'pointer' }}
     >
       <div className="avatar" style={{ overflow: 'hidden' }}>
         {pt.profile_photo_url ? (
@@ -225,32 +254,14 @@ function PtCard({ pt, selectedGoals, onEnquire, onViewProfile }) {
       <div className="pt-info">
         <h3>{pt.display_name}{pt.listing_tier === 'featured' ? ' ★' : ''}</h3>
         <div className="area-line">
-          {locationLine}{pt.rate_gbp ? ` · £${pt.rate_gbp}/session` : ''}
+          {pt.match_via === 'gym' && pt.gym_name ? pt.gym_name : pt.postcode}
         </div>
-        {pt.bio && <p style={{ fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 10px', lineHeight: 1.4 }}>{pt.bio}</p>}
         <div className="pt-tags">
-          {pt.specialisms.map((s) => (
-            <span key={s.id} className={`pt-tag${selectedGoals.has(s.slug) ? ' match' : ''}`}>
-              {s.label}
-            </span>
+          {topTags.map((s) => (
+            <span key={s.id} className="pt-tag">{s.label}</span>
           ))}
+          {extraCount > 0 && <span className="pt-tag" style={{ background: 'var(--steel)' }}>+{extraCount}</span>}
         </div>
-        {socialLinks.length > 0 && (
-          <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
-            {socialLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent-dim)' }}
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-        )}
       </div>
       <div className="stat-col">
         <div className="distance">{pt.distance_miles.toFixed(1)}<small> mi</small></div>

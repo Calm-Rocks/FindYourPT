@@ -77,14 +77,74 @@ a{ color: inherit; }
   .hero h1{ font-size: 38px; }
 }
 
-/* ---------- Search panel ---------- */
-.search-panel{
-  background: var(--paper); color: var(--ink); border-radius: var(--radius);
-  padding: 28px; margin-top: 32px; display: grid;
-  grid-template-columns: 1.5fr 1fr 1.5fr auto; gap: 16px; align-items: end;
+/* ---------- Sticky filter bar ---------- */
+/* Signature element of the redesign: a slim, dark-edged bar that pins to
+   the top of the viewport once scrolled past, so changing filters never
+   requires scrolling back up. Pills reuse .tag-btn language already
+   established elsewhere — one consistent control type instead of mixing
+   text input / native select / custom dropdown. */
+.filter-bar{
+  position: sticky; top: 0; z-index: 50;
+  background: var(--ink); border-bottom: 1px solid var(--line);
+  padding: 14px 0;
 }
-@media (max-width: 900px){ .search-panel{ grid-template-columns: 1fr 1fr; } }
-@media (max-width: 560px){ .search-panel{ grid-template-columns: 1fr; } }
+.filter-bar-inner{
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.filter-location{
+  position: relative; flex: 1 1 220px; min-width: 180px;
+}
+.filter-location input{
+  width: 100%; background: var(--paper); color: var(--ink); border: 1.5px solid transparent;
+  font-family: 'Inter', sans-serif; font-size: 14.5px; padding: 10px 14px 10px 36px;
+  border-radius: 999px; outline: none;
+}
+.filter-location input:focus{ border-color: var(--accent); }
+.filter-location-icon{
+  position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+  color: var(--steel); font-size: 14px; pointer-events: none;
+}
+.filter-pills{ display: flex; gap: 8px; flex-wrap: wrap; }
+.filter-pill{
+  font-family: 'Inter', sans-serif; font-size: 13.5px; font-weight: 600;
+  padding: 9px 16px; border-radius: 999px; border: 1.5px solid var(--line);
+  background: transparent; color: var(--paper); cursor: pointer; transition: all .12s;
+  white-space: nowrap;
+}
+.filter-pill:hover{ border-color: var(--accent); }
+.filter-pill.selected{ background: var(--olive); border-color: var(--olive); color: #fff; }
+
+.filter-pill-dropdown{ position: relative; }
+.filter-pill-panel{
+  position: absolute; top: calc(100% + 8px); left: 0;
+  background: var(--paper); border-radius: var(--radius);
+  z-index: 100; min-width: 220px; max-height: 280px; overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.filter-pill-option{
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; cursor: pointer; font-size: 14px;
+  color: var(--ink); transition: background .1s;
+}
+.filter-pill-option:hover{ background: var(--paper-dim); }
+.filter-pill-option input[type="checkbox"]{ width: 15px; height: 15px; accent-color: var(--olive); flex-shrink: 0; }
+
+.filter-clear{
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+  color: var(--steel); background: none; border: none; cursor: pointer;
+  text-decoration: underline; white-space: nowrap;
+}
+.filter-clear:hover{ color: var(--paper); }
+
+/* Brief pulse shown over results while a re-filter is in flight — replaces
+   a full-page "Searching…" state so the page never feels like it's
+   reloading, just responding. */
+.results-pulse{ opacity: 0.5; transition: opacity .15s; pointer-events: none; }
+
+@media (max-width: 700px){
+  .filter-bar-inner{ gap: 10px; }
+  .filter-location{ flex-basis: 100%; }
+}
 
 .field-label{
   font-family:'Barlow Condensed', sans-serif; text-transform: uppercase;
@@ -175,6 +235,32 @@ input:focus, select:focus, textarea:focus{ border-color: var(--accent); }
   text-decoration: none;
 }
 .pt-card:hover{ border-color: var(--accent); }
+
+/* ---------- Quick-glance result card (search results redesign) ---------- */
+/* Deliberately lighter than .pt-card: name, photo, top 2 tags, distance,
+   price. Bio and socials live on the profile page only, reached by click.
+   Keeps the same paper/ink stat-card language, just less to scan at once. */
+.pt-card-compact{
+  background: var(--paper); color: var(--ink); border-radius: var(--radius);
+  padding: 16px 20px; display: grid; grid-template-columns: 56px 1fr auto;
+  gap: 16px; align-items: center; border: 1px solid transparent; transition: border-color .15s, transform .1s;
+  text-decoration: none;
+}
+.pt-card-compact:hover{ border-color: var(--accent); }
+.pt-card-compact:active{ transform: scale(0.995); }
+.pt-card-compact .avatar{ width: 52px; height: 52px; font-size: 18px; }
+.pt-card-compact h3{ font-size: 17px; margin-bottom: 3px; }
+.pt-card-compact .area-line{ font-size: 12px; margin-bottom: 6px; }
+.pt-card-compact .pt-tags{ gap: 5px; }
+.pt-card-compact .pt-tag{ font-size: 10.5px; padding: 3px 8px; }
+.pt-card-compact .stat-col{ text-align: right; }
+.pt-card-compact .stat-col .distance{ font-size: 17px; }
+.pt-card-compact .stat-col .rate{ font-size: 12px; }
+@media (max-width: 560px){
+  .pt-card-compact{ grid-template-columns: 44px 1fr; }
+  .pt-card-compact .stat-col{ grid-column: 1 / -1; display:flex; justify-content: space-between; align-items:center; border-top: 1px solid var(--line-dark); padding-top: 10px; margin-top: 4px; }
+}
+
 @media (max-width: 700px){
   .pt-card{ grid-template-columns: 64px 1fr; }
   .pt-card .stat-col{ grid-column: 1 / -1; display:flex; justify-content: space-between; align-items:center; border-top: 1px solid var(--line-dark); padding-top: 14px; margin-top: 6px; }
