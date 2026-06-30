@@ -107,7 +107,7 @@ function AppShell() {
       <div className="topbar">
         <div className="wrap">
           <a href="#" className="logo" onClick={(e) => { e.preventDefault(); goToClientView(); }}>
-            <span>SPOT</span>MYPT
+            SPOT<span>MY</span>PT
           </a>
           <nav className="nav-tabs">
             <button className={`nav-tab${view === 'client' ? ' active' : ''}`} onClick={goToClientView}>
