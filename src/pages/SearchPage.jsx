@@ -79,6 +79,7 @@ export default function SearchPage({
         lon: resolved.lon,
         specialismIds,
         ignoreRadius: maxDistance === '',
+        clientMaxDistance: maxDistance === '' ? null : Number(maxDistance),
       });
       setResults(matched);
 
