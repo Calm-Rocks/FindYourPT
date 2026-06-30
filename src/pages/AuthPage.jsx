@@ -40,17 +40,16 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="hero" style={{ paddingBottom: 0, borderBottom: 'none' }}>
-      <div className="wrap">
-        <span className="eyebrow">02 — Get matched with clients near you</span>
-        <h1>List your <em>specialism</em>, set your area, get found.</h1>
-        <p className="sub">
+    <div className="hero" style={{ paddingBottom: 56, borderBottom: 'none' }}>
+      <div className="wrap" style={{ maxWidth: 480, textAlign: 'center' }}>
+        <h1 style={{ fontSize: 40 }}>List your <em>specialism</em>, get found.</h1>
+        <p className="sub" style={{ margin: '16px auto 0', maxWidth: 380 }}>
           {mode === 'signup'
             ? 'Create a trainer account to set up your listing.'
             : 'Log in to manage your listing and view enquiries.'}
         </p>
 
-        <div className="form-card" style={{ marginTop: 32 }}>
+        <div className="form-card" style={{ marginTop: 32, textAlign: 'left' }}>
           <h2>{mode === 'signup' ? 'Create your account' : 'Log in'}</h2>
           <p className="form-sub">
             {mode === 'signup'
@@ -87,7 +86,7 @@ export default function AuthPage() {
               <p className="hint">At least 6 characters.</p>
             </div>
             {error && <p className="error-text">{error}</p>}
-            <button type="submit" className="btn-primary" disabled={submitting}>
+            <button type="submit" className="btn-primary" disabled={submitting} style={{ width: '100%' }}>
               {submitting ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Log in'}
             </button>
           </form>
