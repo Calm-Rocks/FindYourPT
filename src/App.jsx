@@ -8,6 +8,8 @@ import AuthPage from './pages/AuthPage';
 import DashboardOverviewPage from './pages/DashboardOverviewPage';
 import ManageListingPage from './pages/ManageListingPage';
 import EnquiriesPage from './pages/EnquiriesPage';
+import VerificationPage from './pages/VerificationPage';
+import AdminReviewPage from './pages/AdminReviewPage';
 
 // Default search centred on Leicester City centre (LE1 1RB).
 // Used on first load so the page shows results immediately rather than
@@ -130,6 +132,10 @@ function AppShell() {
           <DashboardOverviewPage onNavigate={setPtSubview} />
         ) : ptSubview === 'manage-listing' ? (
           <ManageListingPage onNavigate={setPtSubview} />
+        ) : ptSubview === 'verification' ? (
+          <VerificationPage onNavigate={setPtSubview} />
+        ) : ptSubview === 'admin-review' ? (
+          <AdminReviewPage onNavigate={setPtSubview} />
         ) : (
           <EnquiriesPage onNavigate={setPtSubview} />
         ))}

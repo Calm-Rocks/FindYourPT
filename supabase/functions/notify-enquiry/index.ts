@@ -104,14 +104,18 @@ Deno.serve(async (req) => {
     `;
 
     // Send via Resend
+    const fromEmail = Deno.env.get('RESEND_FROM_EMAIL');
+    const apiKey = Deno.env.get('RESEND_API_KEY');
+    console.log('Sending to:', ptEmail, 'From:', fromEmail, 'API key present:', !!apiKey);
+
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: Deno.env.get('RESEND_FROM_EMAIL'),
+        from: fromEmail,
         to: [ptEmail],
         subject: `New enquiry from ${enquiry.client_name} — FindYourPT`,
         html: emailHtml,
@@ -121,7 +125,7 @@ Deno.serve(async (req) => {
     if (!resendRes.ok) {
       const resendError = await resendRes.text();
       console.error('Resend error:', resendError);
-      return new Response(JSON.stringify({ error: 'Email send failed', detail: resendError }), {
+      return new Response(JSON.stringify({ error: 'Email send failed', detail: resendError, status: resendRes.status }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

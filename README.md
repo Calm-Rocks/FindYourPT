@@ -42,6 +42,9 @@ In your Supabase project dashboard, open **SQL Editor**, and run these files **i
 2. `supabase/migrations/0002_gyms_and_socials.sql` — adds gyms, gym linkage on trainer listings, and website/Instagram/Facebook fields. Seeds ~18 real UK gym branches as curated options.
 3. `supabase/migrations/0003_gym_aware_search.sql` — replaces the search function so it also matches trainers via their linked gym's location, not just their own postcode/radius.
 4. `supabase/migrations/0004_trainer_images.sql` — creates the `trainer-images` storage bucket plus security policies, and adds profile photo / gallery columns to `pts`. **If the bucket-creation statement at the top errors in your SQL editor** (some Supabase projects restrict creating buckets via raw SQL), create it manually instead: Storage → New bucket → name `trainer-images` → Public bucket: ON → File size limit: 5MB → Allowed MIME types: `image/jpeg, image/png` — then run just the policy and `alter table` statements from the file.
+5. `supabase/migrations/0005_search_profile_photo_fix.sql` — fixes a bug where `search_pts` never returned `profile_photo_url`.
+6. `supabase/migrations/0006_any_distance_search.sql` — adds an `ignore_radius` parameter so a client selecting "Any distance" sees all active trainers, not just those whose own coverage radius happens to reach the search location.
+7. `supabase/migrations/0007_verification.sql` — adds trainer verification: an `is_admin` flag, a `verification_status` on each listing, a `verification_submissions` table, a **private** storage bucket for certificates/insurance documents, and updates `search_pts` so only `approved` listings appear in client search. **After running this migration, you must make yourself an admin manually** — see the comment block at the top of the file for the exact SQL.
 
 If you already ran earlier migrations on a live project, just run whichever ones you're missing — they're all additive and won't touch existing trainer or enquiry data.
 
@@ -56,6 +59,17 @@ Profile photos and gallery images go through three independent checks, deliberat
 3. **Row Level Security policies on Supabase Storage** restrict each trainer to writing only inside a folder matching their own user id (`{user_id}/profile.jpg`, `{user_id}/gallery/{id}.jpg`) — verified by directly testing that one trainer's account cannot write into or delete another trainer's folder, even when explicitly attempting to.
 
 Uploaded files are never executed as code by Supabase Storage — they're served as static downloads only — which rules out the most dangerous class of file-upload exploit by design, separate from the validation layers above.
+
+## Trainer verification
+
+Listings only appear in client search once a trainer's PT qualification certificate and public liability insurance have been reviewed and approved by an admin. This is enforced at the database level, not just hidden in the UI:
+
+- The `verification-docs` storage bucket is **not public** (unlike `trainer-images`) — only the uploading trainer and admins can read these files, verified by testing that a different trainer's account genuinely cannot read another trainer's documents, and that anonymous visitors have no access path at all.
+- A trainer cannot approve their own submission — tested directly: a self-approval attempt affects zero rows under RLS.
+- `search_pts` only returns listings with `verification_status = 'approved'`, confirmed by testing that an unverified trainer with an otherwise complete, active listing does not appear in search results.
+- Admin documents are viewed via short-lived signed URLs (5 minutes), not permanent public links, even though only admins can request them.
+
+To become an admin, see the instructions at the top of `0007_verification.sql` — it's a one-time manual SQL update, deliberately not exposed through any UI.
 
 ### 3. Get your API credentials
 

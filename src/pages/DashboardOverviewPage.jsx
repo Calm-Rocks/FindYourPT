@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { useToast } from '../lib/ToastContext';
+import { useIsAdmin } from '../lib/useIsAdmin';
 import { fetchOwnPtProfile, fetchOwnEnquiries, setListingActive } from '../lib/api';
+
+const VERIFICATION_LABELS = {
+  unverified: { text: 'Not verified', className: 'inactive' },
+  pending: { text: 'Verification pending', className: 'inactive' },
+  approved: { text: 'Verified', className: 'active' },
+  rejected: { text: 'Verification rejected', className: 'inactive' },
+};
 
 export default function DashboardOverviewPage({ onNavigate }) {
   const { user, signOut } = useAuth();
   const showToast = useToast();
+  const { isAdmin } = useIsAdmin();
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -44,11 +53,20 @@ export default function DashboardOverviewPage({ onNavigate }) {
     return <div className="wrap"><p className="loading-text">Loading your dashboard…</p></div>;
   }
 
+  const verification = VERIFICATION_LABELS[profile?.verification_status ?? 'unverified'];
+
   return (
     <div className="wrap" style={{ paddingTop: 40, paddingBottom: 80 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ fontSize: 32 }}>Your dashboard</h1>
-        <button className="btn-ghost" onClick={signOut}>Log out</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {isAdmin && (
+            <button className="btn-ghost" onClick={() => onNavigate('admin-review')}>
+              Admin review queue
+            </button>
+          )}
+          <button className="btn-ghost" onClick={signOut}>Log out</button>
+        </div>
       </div>
 
       {!profile && (
@@ -77,6 +95,20 @@ export default function DashboardOverviewPage({ onNavigate }) {
         </div>
       )}
 
+      {profile && profile.verification_status !== 'approved' && (
+        <div className="empty-state" style={{ marginBottom: 28, textAlign: 'left' }}>
+          <h3>Your listing isn't visible to clients yet</h3>
+          <p>
+            FindYourPT verifies every trainer's qualification and insurance before they appear in
+            search. {profile.verification_status === 'pending'
+              ? 'Your documents are awaiting review.'
+              : profile.verification_status === 'rejected'
+                ? `Your last submission was rejected: ${profile.verification_rejection_reason || 'see verification page for details.'}`
+                : 'Submit your certificate and insurance to get verified.'}
+          </p>
+        </div>
+      )}
+
       <div className="card-grid">
         <button
           className="pt-card"
@@ -102,6 +134,20 @@ export default function DashboardOverviewPage({ onNavigate }) {
             <h3>View enquiries</h3>
             <div className="area-line" style={{ marginBottom: 0 }}>
               {enquiryCount} {enquiryCount === 1 ? 'enquiry' : 'enquiries'} from clients who found you.
+            </div>
+          </div>
+        </button>
+
+        <button
+          className="pt-card"
+          style={{ cursor: 'pointer', textAlign: 'left', border: 'none', width: '100%' }}
+          onClick={() => onNavigate('verification')}
+        >
+          <div className="avatar" style={{ background: verification.className === 'active' ? 'var(--olive)' : 'var(--steel)' }}>✓</div>
+          <div className="pt-info">
+            <h3>Verification</h3>
+            <div className="area-line" style={{ marginBottom: 0 }}>
+              <span className={`status-pill ${verification.className}`}>{verification.text}</span>
             </div>
           </div>
         </button>

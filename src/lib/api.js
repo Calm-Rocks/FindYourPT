@@ -182,8 +182,99 @@ export async function removeGalleryImageUrl(userId, url, currentUrls) {
 }
 
 // ---------------------------------------------------------------
-// Enquiries
+// Verification
 // ---------------------------------------------------------------
+export async function fetchOwnVerificationStatus(userId) {
+  const { data, error } = await supabase
+    .from('pts')
+    .select('verification_status, verification_rejection_reason, is_admin')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchOwnLatestSubmission(userId) {
+  const { data, error } = await supabase
+    .from('verification_submissions')
+    .select('*')
+    .eq('pt_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function submitVerification({ userId, certificateUrl, insuranceUrl }) {
+  const { error: submissionError } = await supabase.from('verification_submissions').insert({
+    pt_id: userId,
+    certificate_url: certificateUrl,
+    insurance_url: insuranceUrl,
+  });
+  if (submissionError) throw submissionError;
+
+  // Move the PT's overall status to pending so they show as awaiting
+  // review rather than unverified (which could read as "hasn't tried").
+  const { error: statusError } = await supabase
+    .from('pts')
+    .update({ verification_status: 'pending', verification_rejection_reason: null })
+    .eq('id', userId);
+  if (statusError) throw statusError;
+}
+
+// ---------------------------------------------------------------
+// Admin: verification review queue
+// ---------------------------------------------------------------
+export async function fetchPendingSubmissions() {
+  const { data, error } = await supabase
+    .from('verification_submissions')
+    .select('*, pts(display_name, postcode)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function approveSubmission({ submissionId, ptId, adminId }) {
+  const { error: subError } = await supabase
+    .from('verification_submissions')
+    .update({ status: 'approved', reviewed_by: adminId, reviewed_at: new Date().toISOString() })
+    .eq('id', submissionId);
+  if (subError) throw subError;
+
+  const { error: ptError } = await supabase
+    .from('pts')
+    .update({ verification_status: 'approved', verification_rejection_reason: null })
+    .eq('id', ptId);
+  if (ptError) throw ptError;
+}
+
+export async function rejectSubmission({ submissionId, ptId, adminId, reason }) {
+  const { error: subError } = await supabase
+    .from('verification_submissions')
+    .update({ status: 'rejected', reviewed_by: adminId, reviewed_at: new Date().toISOString(), rejection_reason: reason })
+    .eq('id', submissionId);
+  if (subError) throw subError;
+
+  const { error: ptError } = await supabase
+    .from('pts')
+    .update({ verification_status: 'rejected', verification_rejection_reason: reason })
+    .eq('id', ptId);
+  if (ptError) throw ptError;
+}
+
+// Admin needs a signed URL to view a private verification document,
+// since the bucket is not public. Signed URLs expire (here, 5 minutes)
+// which is appropriate for documents that shouldn't be permanently
+// link-shareable.
+export async function getSignedDocumentUrl(path) {
+  const { data, error } = await supabase.storage
+    .from('verification-docs')
+    .createSignedUrl(path, 300); // 5 minutes
+  if (error) throw error;
+  return data.signedUrl;
+}
 export async function submitEnquiry({ ptId, clientName, clientContact, message, clientPostcode }) {
   const { error } = await supabase.from('enquiries').insert({
     pt_id: ptId,
