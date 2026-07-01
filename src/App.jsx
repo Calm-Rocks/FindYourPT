@@ -12,6 +12,8 @@ import VerificationPage from './pages/VerificationPage';
 import AdminReviewPage from './pages/AdminReviewPage';
 import AdminPtOverviewPage from './pages/AdminPtOverviewPage';
 import LegalPage from './pages/LegalPage';
+import LandingPage from './pages/LandingPage';
+import AiSearchPage from './pages/AiSearchPage';
 
 // Default search centred on Leicester City centre (LE1 1RB).
 // Used on first load so the page shows results immediately rather than
@@ -27,7 +29,7 @@ function AppShell() {
   const showToast = useToast();
 
   const [view, setView] = useState('client');
-  const [clientSubview, setClientSubview] = useState({ name: 'search' });
+  const [clientSubview, setClientSubview] = useState({ name: 'landing' });
   const [ptSubview, setPtSubview] = useState('dashboard');
   // legalDoc holds { document: 'privacy' | 'terms', returnView: 'client' | 'pt' }
   // while a legal page is open, null otherwise — null means "not viewing
@@ -78,7 +80,7 @@ function AppShell() {
 
   function goToClientView() {
     setView('client');
-    setClientSubview({ name: 'search' });
+    setClientSubview({ name: 'landing' });
   }
 
   function goToPtView() {
@@ -139,12 +141,21 @@ function AppShell() {
         ) : (
           <>
             {view === 'client' && (
-              clientSubview.name === 'profile' ? (
+              clientSubview.name === 'landing' ? (
+                <LandingPage
+                  onFindPt={() => { window.scrollTo(0, 0); setClientSubview({ name: 'ai-search' }); }}
+                  onListServices={() => { setView('pt'); window.scrollTo(0, 0); }}
+                />
+              ) : clientSubview.name === 'ai-search' ? (
+                <AiSearchPage
+                  onBack={() => { window.scrollTo(0, 0); setClientSubview({ name: 'landing' }); }}
+                />
+              ) : clientSubview.name === 'profile' ? (
                 <PtProfilePage
                   ptId={clientSubview.ptId}
                   onBack={() => {
                     window.scrollTo(0, 0);
-                    setClientSubview({ name: 'search' });
+                    setClientSubview({ name: 'landing' });
                   }}
                 />
               ) : (
