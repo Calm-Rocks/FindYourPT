@@ -3,6 +3,10 @@ import { resolvePostcode } from '../lib/postcode';
 import { searchPts, submitEnquiry } from '../lib/api';
 import { useToast } from '../lib/ToastContext';
 
+// Derive the Edge Function URL from the existing Supabase URL env var
+// so we don't have to hardcode the project ref anywhere in the codebase.
+const CHAT_PROXY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claude-chat`;
+
 // Specialism slug → id mapping — mirrors what's in the database from
 // migration 0001 so the AI's tool call can specify by slug and we resolve
 // to the numeric id the search function expects, without a round-trip fetch.
@@ -246,7 +250,7 @@ export default function AiSearchPage({ onBack }) {
 
     setLoading(true);
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(CHAT_PROXY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -299,7 +303,7 @@ export default function AiSearchPage({ onBack }) {
         apiHistoryRef.current = historyWithTool;
 
         // Get the model's response now that it has the search results
-        const followUp = await fetch('https://api.anthropic.com/v1/messages', {
+        const followUp = await fetch(CHAT_PROXY_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
